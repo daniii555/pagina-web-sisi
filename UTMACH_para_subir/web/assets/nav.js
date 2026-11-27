@@ -146,27 +146,4 @@
  evidence(cards[0],'codigo-pseint.png','PSeInt · funciones y búsqueda de ubicaciones');evidence(cards[1],'codigo-java-algoritmo.png','Java · algoritmo del mapa interactivo');evidence(cards[1],'codigo-java-servidor.png','Java · servidor web Main.java');
 })();
 
-// Simulación original del equipo: Wokwi. No se usan demostraciones ficticias.
-(()=>{
- const sim=document.getElementById('simulacion');if(!sim)return;
- document.getElementById('video-demostracion')?.remove();
- document.querySelectorAll('#funciona .route-demo, #simulacion .tech-panel').forEach(el=>el.remove());
- const banner=sim.querySelector('.sim-banner');
- if(banner)banner.remove();
- const h=sim.querySelector('h2');if(h)h.textContent='Simulación del proyecto';
- const description=Array.from(sim.children).find(el=>el.tagName==='P'&&el.id!=='sim-link');
- if(description)description.textContent='Simulación electrónica del prototipo UTMACH Orienta en Wokwi: Arduino Uno R3, joystick, pantalla LCD I2C, siete LED y dos zumbadores. Prueba el circuito original y observa su funcionamiento.';
- const old=sim.querySelector('#sim-link');if(old)old.remove();
- const block=document.createElement('div');block.id='wokwi-original';block.style.cssText='margin-top:20px;padding:clamp(16px,3vw,28px);border:1px solid #cbdcf5;border-radius:16px;background:#f6f9ff;color:#23364f';
- const title=document.createElement('h3');title.textContent='Simulación electrónica en Wokwi';title.style.color='#14294b';
- const link=document.createElement('a');link.href='https://wokwi.com/projects/481721161321262081';link.target='_blank';link.rel='noopener noreferrer';link.className='btn';link.textContent='Abrir simulación en Wokwi ↗';link.style.cssText='display:inline-block;background:#2156b0;color:#fff;border-radius:10px;padding:12px 18px;text-decoration:none;font-weight:700';
- block.append(title,link);sim.append(block);
- // El reproductor aparece solamente si el equipo ha publicado un MP4 auténtico.
- const url='assets/videos/demostracion.mp4';
- fetch(url,{method:'HEAD',cache:'no-store'}).then(r=>{
-  if(!r.ok||!r.headers.get('Content-Type')?.startsWith('video/'))return;
-  const video=document.createElement('video');video.controls=true;video.playsInline=true;video.preload='metadata';video.style.cssText='width:100%;max-width:960px;max-height:65vh;display:block;margin:16px auto 0;background:#14294b;border-radius:12px;object-fit:contain';
-  const caption=document.createElement('h4');caption.textContent='Video de la simulación en Wokwi';caption.style.marginTop='20px';
-  video.addEventListener('error',()=>{video.remove();caption.remove();});video.src=url;block.append(caption,video);
- }).catch(()=>{});
-})();
+// La simulación original de Wokwi está integrada en index.html.
