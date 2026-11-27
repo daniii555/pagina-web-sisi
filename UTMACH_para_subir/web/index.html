@@ -7,11 +7,12 @@
 <meta content="#123f90" name="theme-color"/>
 <meta content="UTMACH Orienta: consulta sectores del campus y lleva tu recorrido en el celular mediante un QR." name="description"/>
 <title>UTMACH Orienta | ¿A dónde quieres ir?</title>
-<link href="./assets/style.css" rel="stylesheet"/>
+<link href="./assets/style.css?v=4" rel="stylesheet"/>
 <script src="./assets/config.js"></script>
 <script defer="" src="./assets/qr-core.js"></script>
-<script defer="" src="./assets/app.js"></script>
-<script defer="" src="./assets/nav.js"></script>
+<script defer src="./assets/campus-gps.js?v=1"></script>
+<script defer src="./assets/app.js?v=4"></script>
+<script defer="" src="./assets/nav.js?v=4"></script>
 
 <script defer="" src="./assets/paki.js"></script>
 <link href="assets/proyecto-scoped.css" rel="stylesheet"/><link href="assets/unificado.css?v=historia2" rel="stylesheet"/><script defer="True" src="assets/proyecto-config.js"></script><script defer="True" src="assets/proyecto.js?v=historia2"></script><script defer="True" src="assets/experiencia.js?v=historia2"></script><script defer="True" src="assets/materiales.js"></script><script defer="True" src="assets/admin.js?v=historia2"></script></head>
@@ -26,46 +27,41 @@
 <aside class="sidebar">
 <div class="welcome"><div class="eyebrow"><span class="eyebrow-bar"></span> EXPLORA TU CAMPUS</div>
 <h1>¡Bienvenido!<br/><em>¿A dónde quieres ir?</em></h1>
-<p>Selecciona un lugar y te mostraremos cómo orientarte desde la entrada principal.</p>
+<p>Elige tu punto de partida y tu destino. Puedes usar tu ubicación actual o seleccionar un lugar del campus.</p>
 </div>
 <label class="search" for="buscar"><svg fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16.5 16.5 4.5 4.5"></path></svg><input autocomplete="off" id="buscar" placeholder="Buscar una facultad o lugar…"/></label>
 <div aria-label="Destinos" class="location-list" id="listaLugares"></div>
-<div class="sidebar-foot"><span class="small-icon">⌖</span><div><strong>Origen fijo</strong><small>Acceso principal · ubicación aproximada</small></div></div>
+
 </aside>
 <section class="workspace">
 <div class="workspace-head"><div><span class="kicker">MAPA INTERACTIVO</span><h2>Encuentra tu destino</h2><p>Ubicación de sectores sobre la vista satelital del campus.</p></div><div class="head-tools"><button class="ghost-button" id="btnReset">↻ Reiniciar</button></div></div>
-<div class="map-panel">
+<div class="origin-controls"><div><label for="originSelect">¿Desde dónde sales?</label><select id="originSelect"><option value="entrada">Entrada principal (aprox.)</option></select></div><button type="button" id="gpsToggle" class="ghost-button">⌖ Usar mi ubicación</button><p id="gpsStatus" role="status" aria-live="polite">Ubicación desactivada. Solo se usa en tu navegador si la autorizas.</p></div><div class="map-panel">
 <div class="map-topline"><span class="map-legend"><i class="legend-origen"></i> Inicio aproximado</span><span class="map-legend"><i class="legend-destino"></i> Sector identificado</span><span class="map-legend"><i class="legend-ruta"></i> Ruta ilustrativa</span></div>
-<div class="map-viewport" id="mapViewport"><div class="map-stage" id="mapStage"><img alt="Captura satelital de un sector del campus principal de la UTMACH" class="satellite" draggable="false" src="./assets/campus_referencia.png"/>
-<svg aria-label="Mapa anotado con edificios, origen y ruta ilustrativa" id="mapSvg" role="img" viewbox="0 0 1009 440">
+<div class="map-viewport" id="mapViewport"><div class="map-stage" id="mapStage"><img alt="Captura satelital de un sector del campus principal de la UTMACH" class="satellite" draggable="false" src="./assets/campus_referencia.png?v=4"/>
+<svg aria-label="Mapa anotado con edificios, origen y ruta ilustrativa" id="mapSvg" role="img" viewBox="0 0 698 500">
 <defs>
 <filter height="160%" id="routeGlow" width="160%" x="-30%" y="-30%"><fegaussianblur stddeviation="4"></fegaussianblur></filter>
 <pattern height="12" id="routeHatch" patterntransform="rotate(45)" patternunits="userSpaceOnUse" width="12"><rect fill="#2979ff" height="12" opacity=".08" width="12"></rect><path d="M0 0v12" opacity=".24" stroke="#2979ff" stroke-width="3"></path></pattern>
 </defs>
-<path class="area-highlight" d="M184 41 L313 23 359 79 327 117 203 107Z"></path>
-<path class="area-highlight" d="M586 22 L707 15 738 109 584 123 562 61Z"></path>
-<path class="area-highlight" d="M770 109 L883 111 904 209 781 232 768 167Z"></path>
-<path class="area-highlight" d="M717 325 L829 319 841 439 702 439Z"></path>
-<path class="area-highlight" d="M788 50 L894 42 910 125 805 135Z"></path>
 <polyline class="route-halo" id="routeHalo" points=""></polyline>
 <polyline class="route-line" id="routeLine" points=""></polyline>
 <g class="dest-pulse" id="destinationPulse" transform="translate(-100 -100)"><circle fill="#f7b642" opacity=".22" r="19"></circle><circle fill="#ffad20" r="10" stroke="#fff" stroke-width="3"></circle></g>
-<g class="origin-marker" id="originMarker" transform="translate(448 305)"><circle fill="#1fba85" r="14" stroke="white" stroke-width="4"></circle><circle fill="white" r="4"></circle><path d="M9 -11 L22 -29" stroke="white" stroke-width="4"></path><rect fill="#0e7456" height="29" rx="13" width="162" x="18" y="-55"></rect><text fill="white" text-anchor="middle" x="99" y="-36">ENTRADA PRINCIPAL</text></g>
-<g id="facMarkers"></g>
+<g class="origin-marker" id="originMarker" transform="translate(243 319)"><circle fill="#1fba85" r="14" stroke="white" stroke-width="4"></circle><circle fill="white" r="4"></circle><path d="M9 -11 L22 -29" stroke="white" stroke-width="4"></path><rect fill="#0e7456" height="29" rx="13" width="162" x="18" y="-55"></rect><text fill="white" text-anchor="middle" x="99" y="-36">PUNTO DE INICIO</text></g>
+<g id="facMarkers"></g><g id="gpsMarker" visibility="hidden" pointer-events="none"><circle id="gpsAccuracy" fill="#2979ff" fill-opacity=".12" stroke="#2979ff" stroke-opacity=".6" stroke-width="1"/><circle r="9" fill="#2169d9" stroke="white" stroke-width="3"/></g>
 </svg>
 </div></div>
-<div class="map-foot"><div class="small-alert"><span>ⓘ</span><p><strong>Prototipo:</strong> la imagen muestra solo una parte del campus. El origen y los recorridos deben verificarse físicamente antes de usarlos para guiar personas.</p></div><span class="scroll-hint">↔ Desliza el mapa para explorar</span></div>
+<div class="map-foot"><div class="small-alert"><span>ⓘ</span><p><strong>Prototipo:</strong> la imagen muestra solo una parte del campus. El GPS está calibrado de forma aproximada. Verifica los caminos y accesos en el campus; no es navegación peatonal certificada.</p></div><span class="scroll-hint">↔ Desliza el mapa para explorar</span></div>
 </div>
 <div class="empty-card" id="emptyCard"><span class="empty-icon">↗</span><div><strong>Elige un destino para empezar</strong><p>Al seleccionar una ubicación, aparecerán la ruta y el código QR.</p></div></div>
 <div class="result-card" hidden="" id="resultCard">
 <div class="result-head"><div><span class="kicker">TU RECORRIDO</span><h3 id="resultTitle">—</h3><p id="resultMeta">Entrada principal → Destino</p></div><span class="state-pill" id="resultStatus">Ruta ilustrativa</span></div>
 <div class="result-grid" id="foundResult">
-<div class="directions"><div class="pathway"><div class="route-node start"><span>1</span><div><strong>Entrada principal</strong><small>Origen fijo · ubicación por confirmar</small></div></div><div class="path-line"></div><div class="route-node end"><span>2</span><div><strong id="routeEnd">Destino</strong><small>Sector identificado en la captura</small></div></div></div><div class="details"><h4>Orientación visual</h4><ol id="routeSteps"></ol></div><div class="caution">⚠ Ruta dibujada de manera referencial. No representa una navegación peatonal verificada.</div></div>
+<div class="directions"><div class="pathway"><div class="route-node start"><span>1</span><div><strong id="routeStart">Entrada principal</strong><small id="routeStartDetail">Punto aproximado</small></div></div><div class="path-line"></div><div class="route-node end"><span>2</span><div><strong id="routeEnd">Destino</strong><small>Sector identificado en la captura</small></div></div></div><div class="details"><h4>Orientación visual</h4><ol id="routeSteps"></ol></div><div class="caution">⚠ Ruta dibujada de manera referencial. No representa una navegación peatonal verificada.</div></div>
 <div class="qr-card"><div class="qr-head"><span class="qr-icon">▦</span><div><strong>Lleva tu ruta al celular</strong><small>Escanea el QR con la cámara de tu teléfono</small></div></div><div id="qrInner"><div class="qr-shell"><div id="qrSvg"></div></div><button class="copy-button" id="btnCopy">Copiar enlace</button></div><div class="local-help" hidden="" id="localHelp"><strong>Primero configura el acceso desde tu teléfono</strong><p>La dirección localhost no funciona en el celular. Escribe la IP de esta laptop y el QR se habilitará.</p><div class="ip-form"><input id="ipInput" inputmode="decimal" placeholder="Ej.: 192.168.1.10"/><button id="btnIp">Usar IP</button></div><small>Conecta ambos dispositivos al mismo Wi-Fi y permite Java en la red privada de Windows.</small></div></div>
 </div>
 <div class="pending-route" hidden="" id="pendingResult"><div class="pending-symbol">⌖</div><div><h4>Este destino aún no está ubicado en la captura</h4><p>El menú incluye este lugar, pero todavía necesitamos una imagen más amplia o un plano oficial para dibujar su ruta sin inventarla.</p></div></div>
 </div>
-<footer class="page-foot"><div>UTMACH Orienta · Prototipo estudiantil independiente</div><div>Mapa ilustrativo, no navegación GPS</div></footer>
+<footer class="page-foot"><div>UTMACH Orienta · Prototipo estudiantil independiente</div><div>GPS aproximado · recorridos ilustrativos</div></footer>
 </section>
 </main>
 <div class="expo-content"><div aria-hidden="true" id="progress"></div><div class="expo-main">

@@ -1,23 +1,12 @@
 'use strict';
 
-const PLACE_GROUPS = [
-  {heading: 'FACULTADES Y CARRERAS', places: [
-    {id:'medicina',title:'Medicina',desc:'Bloque de aulas · sector identificable',icon:'✚',pin:[280,67],callout:[106,112,191],short:'MEDICINA',sub:'Bloque de aulas',
-     route:[[448,305],[471,287],[507,270],[529,247],[479,220],[415,186],[356,166],[318,125],[280,67]],steps:['Ubica el origen señalado en verde.','Observa el recorrido azul hacia el sector superior izquierdo de la imagen.','Busca el bloque de aulas identificado como Medicina.']},
-    {id:'empresariales',title:'Facultad de Ciencias Empresariales',desc:'Edificio identificado en el mapa',icon:'▣',pin:[859,166],callout:[681,191,200],short:'CIENCIAS',sub:'EMPRESARIALES',
-     route:[[448,305],[471,287],[507,270],[529,247],[590,229],[644,208],[691,180],[748,173],[806,167],[859,166]],steps:['Parte desde el punto de origen señalado.','Sigue visualmente la ruta azul hacia el lado derecho del campus.','Identifica el bloque rotulado Ciencias Empresariales.']},
-    {id:'sociales',title:'Facultad de Ciencias Sociales',desc:'Edificio identificado en el mapa',icon:'▣',pin:[700,58],callout:[548,91,175],short:'CIENCIAS SOCIALES',sub:'Sector superior del mapa',
-     route:[[448,305],[471,287],[507,270],[529,247],[553,212],[574,177],[601,146],[617,107],[666,95],[700,58]],steps:['Comienza en el origen indicado.','Observa el recorrido hacia el sector central y superior de la imagen.','Busca la Facultad de Ciencias Sociales.']},
-    {id:'civil',title:'Facultad de Ingeniería Civil',desc:'Edificio identificado en el mapa',icon:'▤',pin:[755,391],callout:[775,331,178],short:'INGENIERÍA CIVIL',sub:'Sector inferior derecho',
-     route:[[448,305],[471,287],[507,270],[529,247],[588,276],[642,305],[696,314],[737,353],[755,391]],steps:['Identifica el punto de inicio.', 'La ruta ilustrativa se desplaza hacia la derecha y luego hacia la zona inferior del mapa.','Busca el edificio señalado como Ingeniería Civil.']},
-  ]},
-  {heading:'LABORATORIOS Y ESPACIOS',places:[
-    {id:'laboratorio',title:'Laboratorio 1 · Empresariales',desc:'Laboratorio identificado en el mapa',icon:'◈',pin:[850,98],callout:[655,14,188],short:'LABORATORIO 1',sub:'Ciencias Empresariales',
-     route:[[448,305],[471,287],[507,270],[529,247],[590,229],[644,208],[691,180],[746,148],[817,121],[850,98]],steps:['Comienza desde el origen fijo.','Sigue el trazo azul hacia la zona superior derecha.','Identifica el Laboratorio 1 de Empresariales.']},
-    {id:'plaza',title:'Plazoleta central',desc:'Espacio circular visible en la imagen',icon:'◎',pin:[529,247],callout:[541,282,158],short:'PLAZOLETA',sub:'Referencia central',
-     route:[[448,305],[471,287],[507,270],[529,247]],steps:['Ubica el origen verde.','Observa la ruta corta que llega al espacio circular central.']},
-  ]}
-];
+const PLACE_GROUPS=[{heading:'FACULTADES Y CARRERAS',places:[
+{id:'medicina',title:'Medicina',desc:'Bloque de aulas · sector identificable',icon:'✚'},
+{id:'empresariales',title:'Facultad de Ciencias Empresariales',desc:'Edificio identificado en el mapa',icon:'▣'},
+{id:'sociales',title:'Facultad de Ciencias Sociales',desc:'Edificio identificado en el mapa',icon:'▣'},
+{id:'civil',title:'Facultad de Ingeniería Civil',desc:'Edificio identificado en el mapa',icon:'▤'}]},
+{heading:'LABORATORIOS Y ESPACIOS',places:[{id:'laboratorio',title:'Laboratorio 1 · Empresariales',desc:'Laboratorio identificado en el mapa',icon:'◈'},{id:'plaza',title:'Plazoleta central',desc:'Referencia central aproximada',icon:'◎'}]}];
+PLACE_GROUPS.flatMap(g=>g.places).forEach(p=>{p.pin=CAMPUS_GPS.nodes[p.id];p.route=CAMPUS_GPS.route('entrada',p.id);});
 const places = Object.fromEntries(PLACE_GROUPS.flatMap(g=>g.places.map(p=>[p.id,p])));
 window.ORIENTA_PLACES = places;
 const listEl = document.getElementById('listaLugares');
@@ -41,19 +30,9 @@ function createSVG(name, attrs={}, text=''){
   return el;
 }
 function makeSpot(place){
-  const [x,y]=place.pin;
-  const [bx,by,w]=place.callout;
-  const g=createSVG('g',{class:'spot',transform:'translate(0 0)',role:'button',tabindex:'0','aria-label':'Ver '+place.title,'data-place':place.id});
-  const targetX=bx+(bx<x?w:0);const targetY=by+20;
-  g.append(createSVG('line',{x1:x,y1:y,x2:targetX,y2:targetY,stroke:'#fff', 'stroke-opacity':'.83','stroke-width':'2'}));
-  g.append(createSVG('circle',{cx:x,cy:y,r:10,class:'spot-pin'}));
-  g.append(createSVG('circle',{cx:x,cy:y,r:4,class:'spot-center'}));
-  g.append(createSVG('rect',{x:bx,y:by,width:w,height:44,rx:10,class:'spot-box'}));
-  g.append(createSVG('text',{x:bx+12,y:by+18,class:'spot-text'},place.short));
-  g.append(createSVG('text',{x:bx+12,y:by+34,class:'spot-sub'},place.sub));
-  g.addEventListener('click',()=>selectPlace(place.id));
-  g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();selectPlace(place.id);}});
-  facMarkers.append(g);
+ const [x,y]=place.pin;const g=createSVG('g',{class:'spot',role:'button',tabindex:'0','aria-label':'Ver '+place.title,'data-place':place.id});
+ g.append(createSVG('title',{},place.title));g.append(createSVG('circle',{cx:x,cy:y,r:11,class:'spot-pin'}));g.append(createSVG('circle',{cx:x,cy:y,r:4,class:'spot-center'}));
+ g.addEventListener('click',()=>selectPlace(place.id));g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();selectPlace(place.id);}});facMarkers.append(g);
 }
 Object.values(places).filter(p=>p.pin).forEach(makeSpot);
 
@@ -121,14 +100,14 @@ function selectPlace(id, opts={}){
   activeId=id;renderList(searchInput.value);
   resultCard.hidden=false;emptyCard.hidden=true;
   document.getElementById('resultTitle').textContent=p.title;
-  document.getElementById('resultMeta').textContent='Entrada principal → '+p.title;
-  const found=!!p.pin;
-  document.getElementById('resultStatus').textContent=found?'Ruta ilustrativa':'Por ubicar';
+  document.getElementById('resultMeta').textContent=originName()+' → '+p.title;document.getElementById('routeStart').textContent=originName();document.getElementById('routeStartDetail').textContent=originMode==='gps'?'GPS aproximado; camino cercano':'Punto de referencia aproximado';
+  const path=originMode==='gps'&&!gpsPoint?null:CAMPUS_GPS.route(originMode==='gps'?gpsPoint:originMode,id);const found=!!path;
+  document.getElementById('resultStatus').textContent=found?(originMode==='gps'?'GPS aproximado':'Ruta ilustrativa'):'Origen no disponible';
   document.getElementById('foundResult').hidden=!found;
-  document.getElementById('pendingResult').hidden=found;
+  document.getElementById('pendingResult').hidden=found;if(!found){document.querySelector('#pendingResult h4').textContent='Selecciona un origen válido';document.querySelector('#pendingResult p').textContent='No se puede trazar un recorrido desde esta posición. Usa el selector de origen o vuelve a activar el GPS.';}
   clearMap();
   if(found){
-    const points=p.route.map(pt=>pt.join(',')).join(' ');
+    p.route=path;const points=path.map(pt=>pt.join(',')).join(' ');if(path.length===1)routeHalo.setAttribute('points','');
     routeHalo.setAttribute('points',points);
     routeLine.setAttribute('points',points);
     routeHalo.style.display='block';routeLine.style.display='block';
@@ -136,10 +115,10 @@ function selectPlace(id, opts={}){
     destPulse.style.display='block';
     const el=document.querySelector(`.spot[data-place="${CSS.escape(id)}"]`);if(el)el.classList.add('active');
     document.getElementById('routeEnd').textContent=p.title;
-    document.getElementById('routeSteps').innerHTML=p.steps.map(s=>`<li>${escapeHtml(s)}</li>`).join('');
+    document.getElementById('routeSteps').textContent=path.length===1?'El origen y el destino coinciden.':'Sigue los caminos señalados de forma referencial.';
     renderQR(id);
   }
-  document.dispatchEvent(new CustomEvent('orienta:select',{detail:{id,found}}));
+  document.dispatchEvent(new CustomEvent(opts.refreshOnly?'orienta:route-update':'orienta:select',{detail:{id,found,route:path,origin:originName(),gps:originMode==='gps'}}));
   if(!opts.skipHistory){
     const u=new URL(location.href);u.searchParams.set('dest',id);history.replaceState(null,'',u.toString());
   }
@@ -165,10 +144,19 @@ document.getElementById('btnIp').addEventListener('click',()=>{
   }
   customIp=ip;if(activeId&&places[activeId].pin)renderQR(activeId);
 });
+const originSelect=document.getElementById('originSelect'),gpsToggle=document.getElementById('gpsToggle'),gpsStatus=document.getElementById('gpsStatus'),gpsMarker=document.getElementById('gpsMarker'),originMarker=document.getElementById('originMarker');
+let originMode='entrada',gpsPoint=null,watchId=null,gpsGeneration=0;
+for(const p of Object.values(places)){const o=document.createElement('option');o.value=p.id;o.textContent=p.title;originSelect.append(o);}
+function originName(){return originMode==='gps'?'Mi ubicación aproximada':places[originMode]?.title||'Entrada principal (aprox.)';}
+function updateOrigin(){const pt=originMode==='gps'?(gpsPoint&&CAMPUS_GPS.nearest(gpsPoint)?.point):CAMPUS_GPS.nodes[originMode];originMarker.style.display=pt?'':'none';if(pt){originMarker.setAttribute('transform',`translate(${pt[0]} ${pt[1]})`);originMarker.querySelector('rect').style.display=originMode==='entrada'?'':'none';originMarker.querySelector('text').style.display=originMode==='entrada'?'':'none';originMarker.querySelector('path').style.display=originMode==='entrada'?'':'none';}if(activeId)selectPlace(activeId,{skipHistory:true,refreshOnly:true});}
+function stopGps(){gpsGeneration++;if(watchId!==null)navigator.geolocation.clearWatch(watchId);watchId=null;gpsPoint=null;gpsMarker.setAttribute('visibility','hidden');gpsToggle.textContent='⌖ Usar mi ubicación';gpsToggle.setAttribute('aria-pressed','false');}
+function manual(message){stopGps();originMode=originSelect.value;gpsStatus.textContent=message||'Origen manual. Elige el lugar donde te encuentras.';updateOrigin();}
+originSelect.addEventListener('change',()=>manual());
+gpsToggle.addEventListener('click',()=>{if(watchId!==null){manual('Ubicación desactivada.');return;}if(!window.isSecureContext||!navigator.geolocation){gpsStatus.textContent='El GPS requiere HTTPS o localhost y un navegador compatible. Elige tu origen manualmente.';return;}originMode='gps';gpsPoint=null;const generation=++gpsGeneration;gpsToggle.textContent='Detener ubicación';gpsToggle.setAttribute('aria-pressed','true');gpsStatus.textContent='Solicitando permiso de ubicación…';updateOrigin();watchId=navigator.geolocation.watchPosition(pos=>{if(generation!==gpsGeneration)return;const c=pos.coords,p=CAMPUS_GPS.project(c.latitude,c.longitude),snap=CAMPUS_GPS.nearest(p);const inMap=p[0]>=0&&p[0]<=698&&p[1]>=0&&p[1]<=500;const good=inMap&&c.accuracy<=40&&snap&&snap.distance<=45;gpsMarker.setAttribute('visibility',inMap?'visible':'hidden');if(inMap){gpsMarker.setAttribute('transform',`translate(${p[0]} ${p[1]})`);document.getElementById('gpsAccuracy').setAttribute('r',Math.min(250,Math.max(8,(c.accuracy+25)*CAMPUS_GPS.pixelsPerMeter)));}const next=good?p:null;const changed=(!gpsPoint!==!next)||(gpsPoint&&next&&CAMPUS_GPS.distance(gpsPoint,next)>5);if(changed)gpsPoint=next;gpsStatus.textContent=good?`GPS activo · precisión del dispositivo ±${Math.round(c.accuracy)} m; calibración del mapa aproximada.`:!inMap?'Tu ubicación estimada está fuera de esta captura. Elige un origen manual.':'GPS poco preciso o lejos del camino dibujado. Elige un origen manual.';if(changed)updateOrigin();},err=>{if(generation!==gpsGeneration)return;manual(err.code===1?'Permiso de ubicación denegado. Elige tu origen manualmente.':'No se pudo obtener la ubicación. Elige un origen manual o vuelve a intentar.');},{enableHighAccuracy:true,maximumAge:3000,timeout:12000});});
+window.addEventListener('pagehide',()=>stopGps());
 renderList();
 const initial=new URLSearchParams(location.search).get('dest');
 if(initial&&places[initial]){
-  if(window.innerWidth<=980) document.body.classList.add('mobile-route');
   selectPlace(initial,{skipHistory:true,scroll:false});
 }
 
