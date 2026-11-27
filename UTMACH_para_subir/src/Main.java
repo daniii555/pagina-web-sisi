@@ -21,6 +21,7 @@ public class Main {
     "json", "application/json; charset=UTF-8"
   );
   public static void main(String[] args) throws Exception {
+    initHistory();
     int port;
     try { port = Integer.parseInt(System.getenv().getOrDefault("PORT", "8080")); }
     catch(NumberFormatException e){ port = 8080; }
@@ -34,6 +35,7 @@ public class Main {
     String method = ex.getRequestMethod();
     String path=ex.getRequestURI().getPath();
     if(path.startsWith("/api/admin/")){admin(ex,path);return;}
+    if(path.equals("/api/telemetry/history.tsv")){if(!authorized(ex)){reply(ex,403,"text/plain",new byte[0]);return;}exportHistory(ex);return;}
     if(path.equals("/api/telemetry")){if(!authorized(ex)){reply(ex,403,"text/plain",new byte[0]);return;} if(method.equals("POST")&&!sameOrigin(ex)){reply(ex,403,"text/plain",new byte[0]);return;} telemetry(ex); return;}
     if(path.equals("/proyecto.html")){ex.getResponseHeaders().set("Location","/#nosotros");reply(ex,302,"text/plain",new byte[0]);return;}
     if(!method.equals("GET") && !method.equals("HEAD")) {
@@ -78,27 +80,47 @@ public class Main {
     sessions.remove(sessionId(ex));long now=System.currentTimeMillis();sessions.entrySet().removeIf(e->e.getValue()<now);byte[] bytes=new byte[32];random.nextBytes(bytes);String id=java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);sessions.put(id,now+28800000L);ex.getResponseHeaders().set("Set-Cookie","orienta_session="+id+"; Max-Age=28800"+flags);reply(ex,200,"text/plain",new byte[0]);
   }
   private static final java.util.regex.Pattern FRAME = java.util.regex.Pattern.compile("^STATE:(IDLE|ROUTE|DONE|ERROR)\\|([^|]{0,23})\\|([01]{7})\\|([01]{2})\\|([^|]{16})\\|([^|]{16})$");
+  private static final Path HISTORY_DIR = Path.of(System.getenv().getOrDefault("RAILWAY_VOLUME_MOUNT_PATH", "data")).toAbsolutePath().normalize();
+  private static final Path HISTORY_FILE = HISTORY_DIR.resolve("monitoring.tsv");
+  private static final boolean PERSISTENT = System.getenv("RAILWAY_ENVIRONMENT") == null || System.getenv("RAILWAY_VOLUME_MOUNT_PATH") != null;
   private static final java.util.ArrayDeque<String> HISTORY = new java.util.ArrayDeque<>();
-  private static String current = "null";
-  private static long receivedAt = 0;
-  private static String lastFrame = "";
-  private static long lastHistory = 0;
+  private static long count = 0, receivedAt = 0, lastHistory = 0;
+  private static String current = "null", lastFrame = "";
   private static String quote(String s){return "\""+s.replace("\\","\\\\").replace("\"","\\\"")+"\"";}
-  private static synchronized void telemetry(HttpExchange ex) throws IOException {
-    ex.getResponseHeaders().set("Cache-Control","no-store");
-    String method=ex.getRequestMethod();
+  private static boolean validFrame(String frame){return FRAME.matcher(frame).matches() && frame.chars().allMatch(c->c>=32&&c<=126);}
+  private static String event(String time,String frame){var m=FRAME.matcher(frame);if(!m.matches())throw new IllegalArgumentException();return "{\"time\":"+quote(time)+",\"state\":"+quote(m.group(1))+",\"dest\":"+quote(m.group(2))+",\"led\":"+quote(m.group(3))+",\"buzz\":"+quote(m.group(4))+",\"lcd\":["+quote(m.group(5))+","+quote(m.group(6))+"],\"line\":"+quote(frame)+"}";}
+  private static void record(String time,String frame){HISTORY.addFirst(event(time,frame));while(HISTORY.size()>300)HISTORY.removeLast();count++;}
+  private static void initHistory()throws IOException{
+    Files.createDirectories(HISTORY_DIR);
+    // Migrate the previous, per-test file format once, without deleting its original files.
+    if(!Files.exists(HISTORY_FILE)){
+      java.util.ArrayList<String> rows=new java.util.ArrayList<>();
+      try(var paths=Files.list(HISTORY_DIR)){for(Path file:paths.filter(x->x.getFileName().toString().matches("(?:test|import)-[a-z0-9-]{1,70}\\.tsv")).toList()){
+        try(var reader=Files.newBufferedReader(file,StandardCharsets.UTF_8)){String line;while((line=reader.readLine())!=null){String[] v=line.split("\t",2);if(v.length!=2||!validFrame(v[1]))continue;try{java.time.Instant.parse(v[0]);rows.add(line);}catch(Exception ignored){}}}
+      }}
+      rows.sort(java.util.Comparator.comparing(line->java.time.Instant.parse(line.split("\t",2)[0])));
+      Path tmp=Files.createTempFile(HISTORY_DIR,"monitoring-",".tmp");try{Files.write(tmp,rows,StandardCharsets.UTF_8);Files.move(tmp,HISTORY_FILE,java.nio.file.StandardCopyOption.ATOMIC_MOVE);}finally{Files.deleteIfExists(tmp);}
+    }
+    try(var reader=Files.newBufferedReader(HISTORY_FILE,StandardCharsets.UTF_8)){String line;while((line=reader.readLine())!=null){String[] v=line.split("\t",2);if(v.length!=2||!validFrame(v[1]))continue;try{java.time.Instant.parse(v[0]);record(v[0],v[1]);}catch(Exception ignored){}}}
+    System.out.println("Historial continuo: "+count+" registros; persistencia configurada: "+PERSISTENT);
+  }
+  private static void json(HttpExchange ex,int status,String body)throws IOException{ex.getResponseHeaders().set("Cache-Control","no-store");reply(ex,status,"application/json; charset=UTF-8",body.getBytes(StandardCharsets.UTF_8));}
+  private static void exportHistory(HttpExchange ex)throws IOException{
+    if(!ex.getRequestMethod().equals("GET")){reply(ex,405,"text/plain",new byte[0]);return;}
+    ex.getResponseHeaders().set("Cache-Control","no-store");ex.getResponseHeaders().set("Content-Disposition","attachment; filename=historial-monitoreo.tsv");ex.getResponseHeaders().set("Content-Type","text/tab-separated-values; charset=UTF-8");ex.sendResponseHeaders(200,0);
+    try(var out=ex.getResponseBody();var reader=Files.newBufferedReader(HISTORY_FILE,StandardCharsets.UTF_8)){out.write("Fecha UTC\tMensaje Arduino\n".getBytes(StandardCharsets.UTF_8));String line;while((line=reader.readLine())!=null){out.write((line+"\n").getBytes(StandardCharsets.UTF_8));}}finally{ex.close();}
+  }
+  private static synchronized void telemetry(HttpExchange ex)throws IOException{
+    ex.getResponseHeaders().set("Cache-Control","no-store");String method=ex.getRequestMethod();
     if(method.equals("POST")){
-      String frame=new String(ex.getRequestBody().readNBytes(256),StandardCharsets.US_ASCII);
-      var m=FRAME.matcher(frame);
-      if(!m.matches() || frame.chars().anyMatch(c->c<32||c>126)){reply(ex,400,"text/plain",new byte[0]);return;}
-      long now=System.currentTimeMillis();receivedAt=now;
-      current="{\"time\":"+quote(java.time.Instant.ofEpochMilli(now).toString())+",\"state\":"+quote(m.group(1))+",\"dest\":"+quote(m.group(2))+",\"led\":"+quote(m.group(3))+",\"buzz\":"+quote(m.group(4))+",\"lcd\":["+quote(m.group(5))+","+quote(m.group(6))+"],\"line\":"+quote(frame)+"}";
-      if(!frame.equals(lastFrame)||now-lastHistory>=5000){HISTORY.addFirst(current);while(HISTORY.size()>100)HISTORY.removeLast();lastFrame=frame;lastHistory=now;}
-      reply(ex,200,"text/plain", "ok".getBytes(StandardCharsets.UTF_8));return;
+      byte[] bytes=ex.getRequestBody().readNBytes(257);String frame=new String(bytes,StandardCharsets.US_ASCII);
+      if(bytes.length>256||!validFrame(frame)){reply(ex,400,"text/plain",new byte[0]);return;}
+      long now=System.currentTimeMillis();String timestamp=java.time.Instant.ofEpochMilli(now).toString();
+      if(!frame.equals(lastFrame)||now-lastHistory>=5000){try{Files.writeString(HISTORY_FILE,timestamp+"\t"+frame+"\n",StandardCharsets.UTF_8,java.nio.file.StandardOpenOption.APPEND);record(timestamp,frame);}catch(IOException e){json(ex,507,"{\"error\":\"No se pudo guardar en disco\"}");return;}lastFrame=frame;lastHistory=now;}
+      receivedAt=now;current=event(timestamp,frame);reply(ex,200,"text/plain","ok".getBytes(StandardCharsets.UTF_8));return;
     }
     if(!method.equals("GET")){reply(ex,405,"text/plain",new byte[0]);return;}
-    String json="{\"live\":"+(receivedAt>0&&System.currentTimeMillis()-receivedAt<4500)+",\"current\":"+current+",\"history\":["+String.join(",",HISTORY)+"]}";
-    reply(ex,200,"application/json; charset=UTF-8",json.getBytes(StandardCharsets.UTF_8));
+    json(ex,200,"{\"live\":"+(receivedAt>0&&System.currentTimeMillis()-receivedAt<4500)+",\"current\":"+current+",\"history\":["+String.join(",",HISTORY)+"],\"count\":"+count+",\"persistent\":"+PERSISTENT+"}");
   }
   // IP de la laptop en la red local (para que el QR funcione desde el celular estando en localhost)
   private static String lanIp(){
