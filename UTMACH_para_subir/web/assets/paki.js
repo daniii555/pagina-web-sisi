@@ -35,7 +35,6 @@
   avatar.addEventListener('pointerup', () => { avatar.dataset.dragged = drag && drag.moved ? '1' : ''; drag = null; setTimeout(() => { avatar.dataset.dragged = ''; }, 0); });
   const title = id => (window.ORIENTA_PLACES && window.ORIENTA_PLACES[id] || {}).title || 'tu destino';
 
-  document.addEventListener('orienta:pir', () => say('¡Hola! Soy Paki, tu guía en la UTMACH. ¿A dónde quieres ir?', 9000));
   document.addEventListener('orienta:select', e => say(e.detail.found
     ? '¡Sígueme! Te llevo a ' + title(e.detail.id) + '.'
     : 'Ese lugar aún no está en el mapa. ¡Prueba con otro destino!'));

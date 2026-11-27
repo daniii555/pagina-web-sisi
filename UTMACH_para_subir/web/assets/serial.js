@@ -1,77 +1,13 @@
 'use strict';
-// Comunicación USB con el Arduino mediante Web Serial (Chrome/Edge; requiere HTTPS o localhost).
-// Protocolo (una línea por mensaje, terminada en \n):
-//   Arduino -> Web:  EVT:PIR | ACK:<id> | STATE:<texto>
-//   Web -> Arduino:  DEST:<id> | RESET
 (function(){
-  const BAUD = 9600;
-  let port = null, reader = null, lastSent = '', busy = false, welcomeTimer = null;
-  const topbar = document.querySelector('.topbar');
-  const box = document.createElement('div'); box.className = 'serial-box';
-  box.innerHTML = '<button type="button" id="btnSerial">Conectar Arduino</button><span id="serialState" class="serial-state off">Sin conexión</span>';
-  topbar.appendChild(box);
-  const btn = box.querySelector('#btnSerial'), stateEl = box.querySelector('#serialState');
-  const overlay = document.createElement('div'); overlay.className = 'welcome-overlay'; overlay.hidden = true;
-  overlay.innerHTML = '<div><h2>¡Bienvenido a la UTMACH!</h2><p>Elige en el menú a dónde quieres ir.</p><small>Toca la pantalla para continuar</small></div>';
-  document.body.appendChild(overlay);
-  overlay.addEventListener('click', hideWelcome);
-
-  function setState(text, cls){ stateEl.textContent = text; stateEl.className = 'serial-state ' + cls; }
-  function showWelcome(){ overlay.hidden = false; clearTimeout(welcomeTimer); welcomeTimer = setTimeout(hideWelcome, 12000); }
-  function hideWelcome(){ overlay.hidden = true; clearTimeout(welcomeTimer); }
-
-  async function send(line){
-    if(!port || !port.writable) return;
-    try{ const w = port.writable.getWriter(); await w.write(new TextEncoder().encode(line + '\n')); w.releaseLock(); }
-    catch(e){ console.warn('Error al enviar:', e); setState('Error de envío', 'err'); }
-  }
-  function onLine(line){
-    line = line.trim(); if(!line) return; console.log('[Arduino]', line);
-    if(line === 'EVT:PIR'){ showWelcome(); document.dispatchEvent(new CustomEvent('orienta:pir')); }
-  }
-  async function readLoop(){
-    const dec = new TextDecoder(); let buf = '';
-    try{
-      while(port && port.readable){
-        reader = port.readable.getReader();
-        try{
-          for(;;){ const {value, done} = await reader.read(); if(done) break;
-            buf += dec.decode(value, {stream:true}); let i;
-            while((i = buf.indexOf('\n')) >= 0){ onLine(buf.slice(0, i)); buf = buf.slice(i + 1); } }
-        } finally { reader.releaseLock(); reader = null; }
-      }
-    }catch(e){ console.warn('Lectura interrumpida:', e); }
-    await cleanup('Desconectado');
-  }
-  async function cleanup(msg){
-    const p = port; port = null; lastSent = '';
-    try{ if(reader) await reader.cancel(); }catch(e){}
-    try{ if(p) await p.close(); }catch(e){}
-    btn.textContent = 'Conectar Arduino'; setState(msg, 'off');
-  }
-  async function open(p){
-    port = p; await port.open({baudRate: BAUD});
-    btn.textContent = 'Desconectar'; setState('Arduino conectado', 'on'); readLoop();
-  }
-  async function connect(){
-    if(busy) return; busy = true;
-    try{
-      if(port){ await cleanup('Desconectado'); return; }
-      if(!('serial' in navigator)){ setState('Usa Chrome o Edge en localhost/HTTPS', 'err'); return; }
-      await open(await navigator.serial.requestPort());
-    }catch(e){
-      setState(e.name === 'NotFoundError' ? 'No se eligió ningún puerto' : 'No se pudo abrir el puerto (¿otro programa lo usa?)', 'err'); port = null;
-    }finally{ busy = false; }
-  }
-  btn.addEventListener('click', connect);
-  if('serial' in navigator){
-    navigator.serial.addEventListener('disconnect', () => cleanup('Cable desconectado'));
-    navigator.serial.getPorts().then(ps => { if(ps.length) open(ps[0]).catch(() => { port = null; }); }).catch(() => {});
-  }
-  document.addEventListener('orienta:select', e => {
-    hideWelcome();
-    if(!e.detail.found || e.detail.id === lastSent) return;   // sin comandos repetidos ni destinos sin ruta
-    lastSent = e.detail.id; send('DEST:' + e.detail.id);
-  });
-  document.addEventListener('orienta:reset', () => { hideWelcome(); if(lastSent !== ''){ lastSent = ''; send('RESET'); } });
+ const box=document.createElement('div');box.className='serial-box';box.innerHTML='<button type="button" id="btnSerial">Conectar Arduino</button><span id="serialState" class="serial-state off">Sin conexión</span>';document.querySelector('#serialMount').append(box);
+ const btn=box.querySelector('button'),label=box.querySelector('span'); let sending=false;let pendingFrame=null; async function transmit(line){if(!window.orientaAdmin)return;pendingFrame=line;if(sending)return;sending=true;try{while(pendingFrame!==null&&window.orientaAdmin){let frame=pendingFrame;pendingFrame=null;await fetch('/api/telemetry',{method:'POST',headers:{'Content-Type':'text/plain'},body:frame});}}catch(e){}finally{sending=false;}} let port=null,reader=null,busy=false,queue=Promise.resolve(),last=0,selected=null;
+ function status(text,on=false){label.textContent=text;label.className='serial-state '+(on?'on':'off');try{localStorage.setItem('orienta-usb-v3',JSON.stringify({connected:on,time:Date.now()}));}catch(e){}}
+ function send(line){if(!window.orientaAdmin)return;const p=port;queue=queue.catch(()=>{}).then(async()=>{if(!p||p!==port||!p.writable)return;const w=p.writable.getWriter();try{await w.write(new TextEncoder().encode(line+'\n'));}finally{w.releaseLock();}}).catch(()=>status('Error de envío'));}
+ function joy(dir){const items=[...document.querySelectorAll('.place-button')];if(!items.length)return;let i=items.indexOf(document.activeElement);if(dir==='OK'){if(i>=0)items[i].click();else items[0].focus();return;}i=i<0?0:(i+(dir==='UP'||dir==='LEFT'?-1:1)+items.length)%items.length;items[i].focus();items[i].scrollIntoView({block:'nearest'});}
+ function onLine(line){line=line.replace(/\r$/,'');if(line.startsWith('JOY:')){joy(line.slice(4));return;}const m=/^STATE:(IDLE|ROUTE|DONE|ERROR)\|([^|]{0,23})\|([01]{7})\|([01]{2})\|([^|]{16})\|([^|]{16})$/.exec(line);if(!m)return;transmit(line);last=Date.now();status('Arduino conectado · datos recibidos',true);const x={time:new Date().toISOString(),state:m[1],dest:m[2],led:m[3],buzz:m[4],lcd:[m[5],m[6]],line};try{let h=JSON.parse(localStorage.getItem('orienta-history-v3')||'[]');if(h[0]?.line!==line||!h[0]||Date.now()-Date.parse(h[0].time)>=5000){h.unshift(x);localStorage.setItem('orienta-history-v3',JSON.stringify(h.slice(0,100)));}localStorage.setItem('orienta-current-v3',JSON.stringify(x));}catch(e){} }
+ async function read(p){let buf='',dec=new TextDecoder();try{reader=p.readable.getReader();while(port===p){const {value,done}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});let i;while((i=buf.indexOf('\n'))>=0){onLine(buf.slice(0,i));buf=buf.slice(i+1);}if(buf.length>4096)buf='';}}catch(e){}finally{if(reader){reader.releaseLock();reader=null;}if(port===p){port=null;try{await p.close();}catch(e){}btn.textContent='Conectar Arduino';status('Desconectado');}}}
+ btn.onclick=async()=>{if(busy||!window.orientaAdmin)return;busy=true;try{if(port){const p=port;port=null;if(reader)await reader.cancel();await queue;try{await p.close();}catch(e){}btn.textContent='Conectar Arduino';status('Desconectado');return;}if(!navigator.serial){status('Usa Chrome/Edge en HTTPS o localhost');return;}const p=await navigator.serial.requestPort();await p.open({baudRate:9600});port=p;last=0;btn.textContent='Desconectar';status('USB abierto · esperando datos');read(p);setTimeout(()=>{if(port===p){send('PING');}},2200);}catch(e){status('No se pudo abrir el puerto');}finally{busy=false;}};
+ window.orientaDisconnect=async()=>{if(port){const p=port;port=null;if(reader)await reader.cancel();await queue;try{await p.close();}catch(e){}btn.textContent='Conectar Arduino';status('Desconectado');}}; setInterval(()=>{if(port){if(Date.now()-last>4000)status('USB abierto · sin telemetría reciente');else status('Arduino conectado · datos recibidos',true);}},1000);
+ document.addEventListener('orienta:select',e=>{selected=e.detail.found?'DEST:'+e.detail.id:'NO_ROUTE';send(selected);});document.addEventListener('orienta:reset',()=>{selected=null;send('RESET');});document.addEventListener('orienta:arrive',e=>{if(selected==='DEST:'+e.detail.id)send('NAV:ARRIVED');});document.addEventListener('orienta:play',e=>{selected='DEST:'+e.detail.id;send(selected);});document.addEventListener('orienta:stop',()=>send('RESET'));
 })();

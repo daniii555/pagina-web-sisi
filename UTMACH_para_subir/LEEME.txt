@@ -1,67 +1,14 @@
-UTMACH ORIENTA - VERSIÓN JAVA (PROTOTIPO)
-=======================================
+# UTMACH Orienta — página única
+Base: Expo Amplio Materiales, diseño original del mapa. No incluye la fase Wi-Fi del ESP32.
 
-CONTENIDO
-- src/Main.java: servidor web hecho en Java (sin Maven ni dependencias).
-- web/index.html: interfaz web con mapa, facultades y rutas.
-- web/assets/app.js: selección de destinos, rutas y QR local.
-- web/assets/style.css: diseño responsive.
-- web/assets/qr-core.js: generador de QR integrado, sin depender de internet.
-- web/assets/campus_referencia.png: captura aportada para el prototipo.
-- Dockerfile y railway.json: despliegue en Railway.
+## Railway
+Configurar variables ADMIN_USER (por defecto admin) y ADMIN_PASSWORD (mínimo 12 caracteres, elige una privada y única). No incluir la contraseña en GitHub. Publicar usando Dockerfile existente. Sin contraseña válida el acceso administrador permanece deshabilitado.
 
-REQUISITO: Java JDK 17+ (recomendado JDK 21).
-
-EN WINDOWS
-1. Descomprime todo el proyecto en una carpeta.
-2. Haz doble clic en iniciar_windows.bat.
-3. Abre http://localhost:8080 en el navegador de la laptop.
-4. Para que el QR sirva en el celular, abre CMD y escribe: ipconfig.
-5. En la laptop abre la web con la IP LAN, por ejemplo http://192.168.1.10:8080.
-   Alternativamente, si estás en localhost, la web te ofrece introducir la IP en su sección QR.
-6. Conecta el celular al MISMO Wi-Fi y escanea el QR del destino.
-7. Si Windows pregunta, permite a Java acceder en redes privadas.
-8. Si no conecta, revisa que el firewall permita conexiones a puerto 8080 o publica el sitio en internet.
-
-EN LINUX / MAC
-Ejecuta: ./iniciar_linux_mac.sh
-Y abre http://localhost:8080.
-
-PARA PUBLICAR Y OBTENER UNA URL HTTPS EN RAILWAY
-Este archivo ZIP está listo para desplegar como proyecto Java (Dockerfile).
-Si tienes Railway CLI y una cuenta conectada:
-  railway login
-  railway init
-  railway up
-  railway domain
-Después Railway te proporcionará una dirección HTTPS pública. La página
-creará QR que enlazan automáticamente a esa dirección y la ruta elegida.
-
-IMPORTANTE SOBRE LAS RUTAS
-La imagen satelital facilitada muestra SOLAMENTE una parte del campus.
-Medicina (bloque de aulas), F. Ciencias Sociales, F. Ciencias Empresariales,
-F. Ingeniería Civil, Laboratorio 1 y la plazoleta son lugares/secciones
-señalables visualmente. Los recorridos marcados son ILUSTRATIVOS, no han
-sido comprobados sobre pasos peatonales ni medidas reales. El origen fijo está
-señalado aproximadamente, sin confirmación de ubicación exacta de la entrada.
-Los lugares sin ubicación verificada ya NO aparecen en el menú (antes se identificaban como
-"Por ubicar").
-
-Para una publicación institucional, sustituye la captura de Google Maps por
-cartografía/imágenes con licencia o autorización apropiada y verifica en campo
-la entrada principal, cruces, accesos y rutas seguras.
-
-Medicina es carrera, no una sexta facultad. La UTMACH tiene cinco facultades:
-Ciencias Agropecuarias, Ciencias Empresariales, Ciencias Químicas y de la Salud,
-Ciencias Sociales e Ingeniería Civil (portal.utmachala.edu.ec/portalwp/facultad/).
-
-No usa GPS en vivo, no accede al Arduino y no requiere cámara QR en laptop.
-La cámara es la del celular del visitante.
-
-=== NOVEDADES (integración Arduino + guía tipo Google Maps) ===
-- web/assets/config.js: aquí se pone publicUrl (dirección HTTPS de Railway) y, cuando las tengas, las coordenadas reales para Google Maps.
-- web/assets/nav.js: banner de pasos (recto/derecha/izquierda/llegada), marcador animado y botón "Abrir en Google Maps".
-- web/assets/serial.js: botón "Conectar Arduino" (Web Serial, 9600 baudios). Recibe EVT:PIR (muestra bienvenida) y envía DEST:<id> o RESET.
-- Usar Chrome o Edge en http://localhost:8080 o en la URL HTTPS de Railway. Cerrar el Monitor Serial del Arduino IDE antes de conectar.
-- web/assets/paki.js + paki.png: Paki, asistente con consejos, y camina por la ruta animada.
-- Falta: actualizar el .ino para entender estos mensajes (siguiente paso).
+## Local Windows
+En CMD, desde la carpeta del proyecto:
+```
+set ADMIN_USER=admin
+set ADMIN_PASSWORD=TU_CLAVE_PRIVADA_DE_12_O_MAS_CARACTERES
+iniciar_windows.bat
+```
+Abrir http://localhost:8080. Para USB usar Chrome o Edge en localhost o HTTPS; conectar Arduino, iniciar sesión y seleccionar el puerto. La sesión dura 8 horas y se pierde al reiniciar el servidor. La telemetría se guarda en memoria y requiere sesión de administrador. El firmware debe emitir STATE para mostrar telemetría; el código incluido corresponde a la base original. El público puede usar el mapa, QR, materiales y demostración sin acceso a USB. Las rutas son ilustrativas, no navegación física verificada. Los archivos de código se descargan sin navegar a otras páginas. La simulación visual integrada no sustituye Wokwi.

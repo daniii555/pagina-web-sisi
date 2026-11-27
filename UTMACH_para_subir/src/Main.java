@@ -15,6 +15,8 @@ public class Main {
     "css", "text/css; charset=UTF-8",
     "js", "application/javascript; charset=UTF-8",
     "png", "image/png",
+    "jpg", "image/jpeg",
+    "webp", "image/webp",
     "svg", "image/svg+xml",
     "json", "application/json; charset=UTF-8"
   );
@@ -30,6 +32,10 @@ public class Main {
   }
   private static void handle(HttpExchange ex) throws IOException {
     String method = ex.getRequestMethod();
+    String path=ex.getRequestURI().getPath();
+    if(path.startsWith("/api/admin/")){admin(ex,path);return;}
+    if(path.equals("/api/telemetry")){if(!authorized(ex)){reply(ex,403,"text/plain",new byte[0]);return;} if(method.equals("POST")&&!sameOrigin(ex)){reply(ex,403,"text/plain",new byte[0]);return;} telemetry(ex); return;}
+    if(path.equals("/proyecto.html")){ex.getResponseHeaders().set("Location","/#nosotros");reply(ex,302,"text/plain",new byte[0]);return;}
     if(!method.equals("GET") && !method.equals("HEAD")) {
       reply(ex,405,"text/plain; charset=UTF-8","Método no admitido".getBytes(StandardCharsets.UTF_8)); return;
     }
@@ -47,6 +53,52 @@ public class Main {
     ex.getResponseHeaders().set("Cache-Control","no-cache, max-age=0");
     ex.getResponseHeaders().set("X-Content-Type-Options","nosniff");
     reply(ex,200,TYPES.getOrDefault(ext,"application/octet-stream"),b);
+  }
+  private static final java.util.concurrent.ConcurrentHashMap<String,Long> sessions=new java.util.concurrent.ConcurrentHashMap<>();
+  private static final java.security.SecureRandom random=new java.security.SecureRandom();
+  private static String sessionId(HttpExchange ex){String c=ex.getRequestHeaders().getFirst("Cookie");if(c!=null)for(String part:c.split(";")){String v=part.trim();if(v.startsWith("orienta_session="))return v.substring(16);}return "";}
+  private static boolean authorized(HttpExchange ex){Long expiry=sessions.get(sessionId(ex));return expiry!=null&&expiry>System.currentTimeMillis();}
+  private static boolean sameOrigin(HttpExchange ex){String o=ex.getRequestHeaders().getFirst("Origin"),h=ex.getRequestHeaders().getFirst("Host");return o!=null&&(o.equals("https://"+h)||o.equals("http://"+h));}
+  private static boolean secure(HttpExchange ex){String h=ex.getRequestHeaders().getFirst("Host");return h==null||!(h.matches("localhost(:[0-9]+)?")||h.matches("127\\.0\\.0\\.1(:[0-9]+)?"));}
+  private static long windowStart=0;private static int attempts=0;
+  private static synchronized boolean permit(){long now=System.currentTimeMillis();if(now-windowStart>60000){windowStart=now;attempts=0;}return ++attempts<=20;}
+  private static void admin(HttpExchange ex,String path)throws IOException{
+    ex.getResponseHeaders().set("Cache-Control","no-store");String method=ex.getRequestMethod();
+    if(path.equals("/api/admin/session")&&method.equals("GET")){reply(ex,authorized(ex)?200:401,"text/plain",new byte[0]);return;}
+    if(!method.equals("POST")||!sameOrigin(ex)){reply(ex,403,"text/plain",new byte[0]);return;}
+    String flags="; Path=/; HttpOnly; SameSite=Strict"+(secure(ex)?"; Secure":"");
+    if(path.equals("/api/admin/logout")){sessions.remove(sessionId(ex));ex.getResponseHeaders().set("Set-Cookie","orienta_session=; Max-Age=0"+flags);reply(ex,200,"text/plain",new byte[0]);return;}
+    if(!path.equals("/api/admin/login")){reply(ex,404,"text/plain",new byte[0]);return;}
+    String password=System.getenv().getOrDefault("ADMIN_PASSWORD",""),user=System.getenv().getOrDefault("ADMIN_USER","admin");
+    if(password.length()<12){reply(ex,503,"text/plain",new byte[0]);return;}
+    if(!permit()){reply(ex,429,"text/plain",new byte[0]);return;}
+    byte[] raw=ex.getRequestBody().readNBytes(4097);if(raw.length>4096){reply(ex,400,"text/plain",new byte[0]);return;}
+    Map<String,String> form=new java.util.HashMap<>();try{for(String pair:new String(raw,StandardCharsets.UTF_8).split("&")){String[] kv=pair.split("=",2);if(kv.length==2)form.put(java.net.URLDecoder.decode(kv[0],StandardCharsets.UTF_8),java.net.URLDecoder.decode(kv[1],StandardCharsets.UTF_8));}}catch(IllegalArgumentException e){reply(ex,400,"text/plain",new byte[0]);return;}
+    if(!user.equals(form.get("user"))||!java.security.MessageDigest.isEqual(password.getBytes(StandardCharsets.UTF_8),form.getOrDefault("password","").getBytes(StandardCharsets.UTF_8))){reply(ex,401,"text/plain",new byte[0]);return;}
+    sessions.remove(sessionId(ex));long now=System.currentTimeMillis();sessions.entrySet().removeIf(e->e.getValue()<now);byte[] bytes=new byte[32];random.nextBytes(bytes);String id=java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);sessions.put(id,now+28800000L);ex.getResponseHeaders().set("Set-Cookie","orienta_session="+id+"; Max-Age=28800"+flags);reply(ex,200,"text/plain",new byte[0]);
+  }
+  private static final java.util.regex.Pattern FRAME = java.util.regex.Pattern.compile("^STATE:(IDLE|ROUTE|DONE|ERROR)\\|([^|]{0,23})\\|([01]{7})\\|([01]{2})\\|([^|]{16})\\|([^|]{16})$");
+  private static final java.util.ArrayDeque<String> HISTORY = new java.util.ArrayDeque<>();
+  private static String current = "null";
+  private static long receivedAt = 0;
+  private static String lastFrame = "";
+  private static long lastHistory = 0;
+  private static String quote(String s){return "\""+s.replace("\\","\\\\").replace("\"","\\\"")+"\"";}
+  private static synchronized void telemetry(HttpExchange ex) throws IOException {
+    ex.getResponseHeaders().set("Cache-Control","no-store");
+    String method=ex.getRequestMethod();
+    if(method.equals("POST")){
+      String frame=new String(ex.getRequestBody().readNBytes(256),StandardCharsets.US_ASCII);
+      var m=FRAME.matcher(frame);
+      if(!m.matches() || frame.chars().anyMatch(c->c<32||c>126)){reply(ex,400,"text/plain",new byte[0]);return;}
+      long now=System.currentTimeMillis();receivedAt=now;
+      current="{\"time\":"+quote(java.time.Instant.ofEpochMilli(now).toString())+",\"state\":"+quote(m.group(1))+",\"dest\":"+quote(m.group(2))+",\"led\":"+quote(m.group(3))+",\"buzz\":"+quote(m.group(4))+",\"lcd\":["+quote(m.group(5))+","+quote(m.group(6))+"],\"line\":"+quote(frame)+"}";
+      if(!frame.equals(lastFrame)||now-lastHistory>=5000){HISTORY.addFirst(current);while(HISTORY.size()>100)HISTORY.removeLast();lastFrame=frame;lastHistory=now;}
+      reply(ex,200,"text/plain", "ok".getBytes(StandardCharsets.UTF_8));return;
+    }
+    if(!method.equals("GET")){reply(ex,405,"text/plain",new byte[0]);return;}
+    String json="{\"live\":"+(receivedAt>0&&System.currentTimeMillis()-receivedAt<4500)+",\"current\":"+current+",\"history\":["+String.join(",",HISTORY)+"]}";
+    reply(ex,200,"application/json; charset=UTF-8",json.getBytes(StandardCharsets.UTF_8));
   }
   // IP de la laptop en la red local (para que el QR funcione desde el celular estando en localhost)
   private static String lanIp(){

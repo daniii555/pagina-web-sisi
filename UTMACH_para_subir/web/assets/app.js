@@ -109,7 +109,7 @@ function renderQR(id){
   let paths='';
   for(let r=0;r<count;r++) for(let c=0;c<count;c++) if(code.isDark(r,c)) paths+=`M${c+pad} ${r+pad}h1v1h-1z`;
   document.getElementById('qrSvg').innerHTML=`<svg viewBox="0 0 ${view} ${view}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Código QR con enlace a la ruta"><rect width="${view}" height="${view}" fill="white"/><path d="${paths}" fill="#102b52"/></svg>`;
-  const link=document.getElementById('urlLink');link.href=url;link.textContent='Abrir esta ruta ↗';
+  
   document.getElementById('btnCopy').onclick=async()=>{
     try {await navigator.clipboard.writeText(url);document.getElementById('btnCopy').textContent='¡Enlace copiado!';}
     catch(e){window.prompt('Copia esta dirección:',url);}

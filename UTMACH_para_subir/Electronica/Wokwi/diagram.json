@@ -1,0 +1,381 @@
+{
+  "version": 1,
+  "author": "Orienta Campus",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "wokwi-arduino-uno",
+      "id": "uno",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led1",
+      "top": -100,
+      "left": 360,
+      "attrs": {
+        "color": "red"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": -20,
+      "left": 360,
+      "attrs": {
+        "value": "330"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led2",
+      "top": -100,
+      "left": 420,
+      "attrs": {
+        "color": "red"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r2",
+      "top": -20,
+      "left": 420,
+      "attrs": {
+        "value": "330"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led3",
+      "top": -100,
+      "left": 480,
+      "attrs": {
+        "color": "yellow"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r3",
+      "top": -20,
+      "left": 480,
+      "attrs": {
+        "value": "330"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led4",
+      "top": -100,
+      "left": 540,
+      "attrs": {
+        "color": "yellow"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r4",
+      "top": -20,
+      "left": 540,
+      "attrs": {
+        "value": "330"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led5",
+      "top": -100,
+      "left": 600,
+      "attrs": {
+        "color": "yellow"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r5",
+      "top": -20,
+      "left": 600,
+      "attrs": {
+        "value": "330"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led6",
+      "top": -100,
+      "left": 660,
+      "attrs": {
+        "color": "green"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r6",
+      "top": -20,
+      "left": 660,
+      "attrs": {
+        "value": "330"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led7",
+      "top": -100,
+      "left": 720,
+      "attrs": {
+        "color": "green"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r7",
+      "top": -20,
+      "left": 720,
+      "attrs": {
+        "value": "330"
+      }
+    },
+    {
+      "type": "wokwi-lcd1602",
+      "id": "lcd",
+      "top": -210,
+      "left": 0,
+      "attrs": {
+        "pins": "i2c"
+      }
+    },
+    {
+      "type": "wokwi-analog-joystick",
+      "id": "joy",
+      "top": 260,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "bz1",
+      "top": 180,
+      "left": 380,
+      "attrs": {
+        "volume": "0.1"
+      }
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "bz2",
+      "top": 180,
+      "left": 510,
+      "attrs": {
+        "volume": "0.1"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "uno:5",
+      "r1:1",
+      "red",
+      []
+    ],
+    [
+      "r1:2",
+      "led1:A",
+      "red",
+      []
+    ],
+    [
+      "led1:C",
+      "uno:GND.1",
+      "black",
+      []
+    ],
+    [
+      "uno:6",
+      "r2:1",
+      "red",
+      []
+    ],
+    [
+      "r2:2",
+      "led2:A",
+      "red",
+      []
+    ],
+    [
+      "led2:C",
+      "uno:GND.1",
+      "black",
+      []
+    ],
+    [
+      "uno:7",
+      "r3:1",
+      "yellow",
+      []
+    ],
+    [
+      "r3:2",
+      "led3:A",
+      "yellow",
+      []
+    ],
+    [
+      "led3:C",
+      "uno:GND.1",
+      "black",
+      []
+    ],
+    [
+      "uno:8",
+      "r4:1",
+      "yellow",
+      []
+    ],
+    [
+      "r4:2",
+      "led4:A",
+      "yellow",
+      []
+    ],
+    [
+      "led4:C",
+      "uno:GND.1",
+      "black",
+      []
+    ],
+    [
+      "uno:9",
+      "r5:1",
+      "yellow",
+      []
+    ],
+    [
+      "r5:2",
+      "led5:A",
+      "yellow",
+      []
+    ],
+    [
+      "led5:C",
+      "uno:GND.1",
+      "black",
+      []
+    ],
+    [
+      "uno:10",
+      "r6:1",
+      "green",
+      []
+    ],
+    [
+      "r6:2",
+      "led6:A",
+      "green",
+      []
+    ],
+    [
+      "led6:C",
+      "uno:GND.1",
+      "black",
+      []
+    ],
+    [
+      "uno:11",
+      "r7:1",
+      "green",
+      []
+    ],
+    [
+      "r7:2",
+      "led7:A",
+      "green",
+      []
+    ],
+    [
+      "led7:C",
+      "uno:GND.1",
+      "black",
+      []
+    ],
+    [
+      "lcd:VCC",
+      "uno:5V",
+      "red",
+      []
+    ],
+    [
+      "lcd:GND",
+      "uno:GND.2",
+      "black",
+      []
+    ],
+    [
+      "lcd:SDA",
+      "uno:A4",
+      "green",
+      []
+    ],
+    [
+      "lcd:SCL",
+      "uno:A5",
+      "blue",
+      []
+    ],
+    [
+      "joy:VCC",
+      "uno:5V",
+      "red",
+      []
+    ],
+    [
+      "joy:GND",
+      "uno:GND.2",
+      "black",
+      []
+    ],
+    [
+      "joy:HORZ",
+      "uno:A2",
+      "green",
+      []
+    ],
+    [
+      "joy:VERT",
+      "uno:A3",
+      "blue",
+      []
+    ],
+    [
+      "joy:SEL",
+      "uno:12",
+      "purple",
+      []
+    ],
+    [
+      "bz1:1",
+      "uno:GND.3",
+      "black",
+      []
+    ],
+    [
+      "bz1:2",
+      "uno:A0",
+      "orange",
+      []
+    ],
+    [
+      "bz2:1",
+      "uno:GND.3",
+      "black",
+      []
+    ],
+    [
+      "bz2:2",
+      "uno:A1",
+      "orange",
+      []
+    ]
+  ],
+  "dependencies": {}
+}

@@ -12,7 +12,7 @@
   const banner = document.createElement('div');
   banner.id = 'navBanner'; banner.className = 'nav-banner'; banner.hidden = true;
   banner.innerHTML = '<div class="nav-icon" id="navIcon">⬆</div><div class="nav-copy"><strong id="navText"></strong><small id="navSub"></small></div>' +
-    '<div class="nav-actions"><button type="button" id="navPlay">▶ Iniciar recorrido</button><a id="navGmaps" target="_blank" rel="noopener">Abrir en Google Maps</a></div>';
+    '<div class="nav-actions"><button type="button" id="navPlay">▶ Iniciar recorrido</button></div>';
   grid.parentNode.insertBefore(banner, grid);
   const $ = id => banner.querySelector('#' + id);
 
@@ -67,7 +67,7 @@
     }catch(e){}
   }
   function play(){
-    stop(); const L = routeLine.getTotalLength(), speed = 85; let t0 = null, cur = -1;
+    if(!place)return;stop();document.dispatchEvent(new CustomEvent('orienta:play',{detail:{id:place.id}})); const L = routeLine.getTotalLength(), speed = 85; let t0 = null, cur = -1;
     mover = document.createElementNS(svgNS, 'g'); mover.setAttribute('class', 'nav-mover');
     mover.innerHTML = '<circle r="30" fill="#2979ff" opacity=".25"><animate attributeName="r" values="22;34;22" dur="1.6s" repeatCount="indefinite"/></circle><g class="paki-bob"><clipPath id="pakiClip"><circle r="24"/></clipPath><circle r="26" fill="#fff"/><image href="./assets/paki.png" x="-48" y="-26" width="100" height="106" clip-path="url(#pakiClip)"/></g>';
     mapSvg.appendChild(mover); $('navPlay').textContent = '■ Detener';
@@ -86,12 +86,12 @@
     const dest = c ? c.lat + ',' + c.lng : encodeURIComponent(p.title + ', Universidad Técnica de Machala, Ecuador');
     return 'https://www.google.com/maps/dir/?api=1&travelmode=walking&destination=' + dest + (o ? '&origin=' + o.lat + ',' + o.lng : '');
   }
-  $('navPlay').addEventListener('click', () => raf || (mover && $('navPlay').textContent.startsWith('■')) ? stop() : play());
+  $('navPlay').addEventListener('click', () => raf || (mover && $('navPlay').textContent.startsWith('■')) ? (stop(),document.dispatchEvent(new CustomEvent('orienta:stop'))) : play());
   document.addEventListener('orienta:select', e => {
     stop(); place = window.ORIENTA_PLACES && window.ORIENTA_PLACES[e.detail.id];
     if(!e.detail.found || !place){ banner.hidden = true; return; }
-    steps = buildSteps(place); fit(place); banner.hidden = false; $('navGmaps').href = gmapsUrl(place); show(0, 'Pulsa «Iniciar recorrido» para ver el camino');
-    if(!matchMedia('(prefers-reduced-motion: reduce)').matches) setTimeout(play, 700);
+    steps = buildSteps(place); fit(place); banner.hidden = false;  show(0, 'Pulsa «Iniciar recorrido» para ver el camino');
+    if(!matchMedia('(prefers-reduced-motion: reduce)').matches) {const id=place.id;setTimeout(()=>{if(place?.id===id&&!banner.hidden&&!raf)play();},700);}
   });
   document.addEventListener('orienta:reset', () => { stop(); banner.hidden = true; });
 })();

@@ -1,0 +1,15 @@
+UTMACH ORIENTA — Arduino Uno R3, 5 V (USB)
+Asignación propuesta, conservando el joystick del código original:
+Rojos R1/R2: D5, D6
+Amarillos A1/A2/A3: D7, D8, D9
+Verdes V1/V2: D10, D11
+Cada LED individual: pin a resistencia propia de 330 ohm y ánodo; cátodo a GND.
+Joystick: VRx A2, VRy A3, SW D12, VCC 5V, GND GND.
+LCD I2C: SDA A4, SCL A5, VCC 5V, GND GND. Dirección 0x27 (si corresponde, 0x3F).
+Zumbadores: A0 y A1, señales tone() como en el código original; confirmar que el zumbador es compatible.
+Si son zumbadores de dos terminales o consumen más que la salida del Arduino, usar un controlador adecuado (p.ej. el montaje 2N2222 existente), comprobar tipo y corriente antes de alimentar. No conectar cargas de corriente desconocida directamente al pin.
+No conectar PIR ni los dos botones externos. D0/D1 reservados para USB serial.
+Desconectar alimentación antes de cambiar el cableado. No usar tensión de red.
+Instalar LiquidCrystal_I2C en Arduino IDE, elegir Uno y puerto COM, cargar el .ino.
+Prueba con monitor serie 9600, fin de línea Nueva línea: DEST:medicina, luego NAV:ARRIVED; RESET limpia; NO_ROUTE enciende rojo. Cerrar monitor antes de conectar desde Chrome/Edge.
+Los tres amarillos parpadean simultáneamente cada 500 ms hasta que el mapa termina la animación; si pasan 60 segundos sin confirmación, se indica error y se apagan zumbadores. Los verdes indican fin de demostración, no llegada real.
