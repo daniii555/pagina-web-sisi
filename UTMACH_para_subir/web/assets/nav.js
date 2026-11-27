@@ -147,3 +147,20 @@
 })();
 
 // La simulación original de Wokwi está integrada en index.html.
+
+/* Joystick de navegación global, activo exclusivamente para el administrador. */
+(()=>{const original=window.orientaJoystick;if(typeof original!=='function')return;
+const panel=document.getElementById('adminPanel'), old=panel?.querySelector('.map-admin-mode');if(!old)return;
+const dock=document.createElement('button');dock.type='button';dock.id='joy-global-mode';dock.className='map-admin-mode';dock.hidden=true;dock.style.cssText='position:fixed;bottom:16px;left:16px;z-index:45;background:#2156b0;color:white;border:1px solid #d0e0f8;border-radius:12px;padding:10px 14px;box-shadow:0 5px 18px #14294b33;max-width:calc(100vw - 32px);font-weight:700';document.body.append(dock);old.hidden=true;
+let mode=0,internal=0,pending=0,marked=null;
+const names=['Página completa','Explorar mapa','Elegir destino'];
+function clear(){if(marked){marked.style.outline='';marked.style.outlineOffset='';marked=null;}}
+function setMode(n){mode=n;clear();dock.textContent='Joystick: '+names[mode]+' · doble OK cambia modo';if(mode){let target=mode===1?0:1;if(internal!==target){old.click();internal=target;}document.getElementById('mapa')?.scrollIntoView({behavior:'smooth',block:'start'});}else document.querySelector('.map-crosshair')?.setAttribute('hidden','');}
+function visible(el){const r=el.getBoundingClientRect(),s=getComputedStyle(el);return !el.closest('[hidden]')&&!el.disabled&&s.visibility!=='hidden'&&r.width>0&&r.height>0&&r.bottom>0&&r.top<innerHeight&&r.right>0&&r.left<innerWidth;}
+function controls(){const dialog=document.querySelector('dialog[open]');return [...(dialog||document).querySelectorAll('button,a[href],summary,select,[role="button"]')].filter(visible);}
+function page(dir){if(dir==='UP'||dir==='DOWN'){clear();window.scrollBy({top:(dir==='UP'?-1:1)*Math.max(140,Math.round(innerHeight*.37)),behavior:'smooth'});return;}const a=controls();if(dir==='OK'){if(marked&&visible(marked)){if(marked.tagName==='SELECT'){marked.focus();marked.showPicker?.();}else marked.click();}return;}if(!a.length)return;let i=a.indexOf(marked);i=i<0?(dir==='LEFT'?a.length-1:0):(i+(dir==='LEFT'?-1:1)+a.length)%a.length;clear();marked=a[i];marked.style.outline='3px solid #2156b0';marked.style.outlineOffset='4px';marked.focus({preventScroll:true});}
+function execute(dir){if(!window.orientaAdmin)return;if(mode===0)page(dir);else original(dir);}
+window.orientaJoystick=dir=>{if(!window.orientaAdmin)return;if(dir==='OK'){if(pending){clearTimeout(pending);pending=0;setMode((mode+1)%3);}else pending=setTimeout(()=>{pending=0;execute('OK');},420);return;}if(pending){clearTimeout(pending);pending=0;}execute(dir);};
+dock.onclick=()=>setMode((mode+1)%3);
+function sync(){dock.hidden=!window.orientaAdmin;if(dock.hidden){clear();if(pending){clearTimeout(pending);pending=0;}setMode(0);}}
+new MutationObserver(sync).observe(panel,{attributes:true,attributeFilter:['hidden']});setMode(0);sync();})();
