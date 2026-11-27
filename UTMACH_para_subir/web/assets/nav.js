@@ -145,3 +145,16 @@
  function evidence(card,file,label){if(!card)return;const f=document.createElement('figure');f.className='code-evidence';const b=document.createElement('button');b.type='button';b.setAttribute('aria-label','Ampliar '+label);const img=document.createElement('img');img.src='assets/evidencias/'+file;img.alt=label;img.loading='lazy';b.append(img);const cap=document.createElement('figcaption');cap.textContent=label;f.append(b,cap);card.append(f);b.addEventListener('click',()=>{if(!gallery)return;gallery.querySelector('img').src=img.src;gallery.querySelector('img').alt=label;gallery.querySelector('p').textContent=label;gallery.showModal();});}
  evidence(cards[0],'codigo-pseint.png','PSeInt · funciones y búsqueda de ubicaciones');evidence(cards[1],'codigo-java-algoritmo.png','Java · algoritmo del mapa interactivo');evidence(cards[1],'codigo-java-servidor.png','Java · servidor web Main.java');
 })();
+
+// Video de demostración del equipo (archivo real, no reproducción simulada).
+(()=>{
+ const section=document.getElementById('desarrollo');if(!section||document.getElementById('video-demostracion'))return;
+ const block=document.createElement('div');block.id='video-demostracion';block.style.cssText='margin-top:24px;padding:clamp(14px,3vw,26px);border:1px solid #dce6f4;border-radius:16px;background:#f6f9ff;color:#23364f';
+ const title=document.createElement('h3');title.textContent='Video demostrativo del proyecto';title.style.color='#14294b';
+ const status=document.createElement('p');status.textContent='Comprobando disponibilidad del video…';status.style.color='#526781';status.setAttribute('role','status');
+ const player=document.createElement('video');player.controls=true;player.playsInline=true;player.preload='metadata';player.hidden=true;player.style.cssText='width:100%;max-width:960px;aspect-ratio:16/9;display:block;margin:12px auto 0;background:#14294b;border-radius:12px;object-fit:contain';
+ player.style.display='none';block.append(title,status,player);section.append(block);
+ const url='assets/videos/demostracion.mp4';
+ fetch(url,{method:'HEAD',cache:'no-store'}).then(r=>{if(!r.ok||!r.headers.get('Content-Type')?.startsWith('video/'))throw Error('Video pendiente');player.src=url;player.hidden=false;player.style.display='block';status.textContent='Reproduce la demostración de UTMACH Orienta.';}).catch(()=>{status.textContent='Video demostrativo pendiente de incorporar.';});
+ player.addEventListener('error',()=>{player.hidden=true;player.style.display='none';status.textContent='No se pudo reproducir el video. Comprueba el archivo MP4.';});
+})();
