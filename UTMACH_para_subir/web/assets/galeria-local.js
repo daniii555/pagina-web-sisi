@@ -1,0 +1,1 @@
+'use strict';(()=>{const btn=document.getElementById('montaje-ampliar'),dialog=document.getElementById('gallery-dialog');if(!btn||!dialog)return;btn.addEventListener('click',()=>{const img=btn.querySelector('img'),target=dialog.querySelector('img'),caption=dialog.querySelector('p');target.src=img.src;target.alt=img.alt;caption.textContent=img.alt;dialog.showModal();});})();

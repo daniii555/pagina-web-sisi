@@ -31,10 +31,11 @@ public class Main {
     System.out.println("UTMACH Orienta listo en http://localhost:" + port);
   }
   private static void handle(HttpExchange ex) throws IOException {
+    ex.getResponseHeaders().set("Permissions-Policy","geolocation=()");
     String method = ex.getRequestMethod();
     String path=ex.getRequestURI().getPath();
     if(path.startsWith("/api/admin/")){admin(ex,path);return;}
-    if(path.equals("/api/telemetry")){if(!authorized(ex)){reply(ex,403,"text/plain",new byte[0]);return;} if(method.equals("POST")&&!sameOrigin(ex)){reply(ex,403,"text/plain",new byte[0]);return;} telemetry(ex); return;}
+    if(path.equals("/api/telemetry")){if(method.equals("GET")){telemetry(ex);return;}if(!method.equals("POST")){reply(ex,405,"text/plain",new byte[0]);return;}if(!authorized(ex)||!sameOrigin(ex)){reply(ex,403,"text/plain",new byte[0]);return;}telemetry(ex);return;}
     if(path.equals("/proyecto.html")){ex.getResponseHeaders().set("Location","/#nosotros");reply(ex,302,"text/plain",new byte[0]);return;}
     if(!method.equals("GET") && !method.equals("HEAD")) {
       reply(ex,405,"text/plain; charset=UTF-8","Método no admitido".getBytes(StandardCharsets.UTF_8)); return;
