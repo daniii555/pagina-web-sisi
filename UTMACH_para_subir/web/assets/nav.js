@@ -18,7 +18,7 @@
 
   const viewport = document.getElementById('mapViewport'), stage = document.getElementById('mapStage');
   // En el celular: ajusta el mapa para que se vea TODA la ruta (entrada principal -> destino), sin desplazarse.
-  function fit(p){ /* La cámara interactiva ajusta la ruta. */ }
+  function fit(p){ /* Encuadre fijo: no modificar escala ni posición. */ }
   function heading(a, b){ return Math.atan2(b[1]-a[1], b[0]-a[0]) * 180 / Math.PI; }
   function delta(a, b){ let d = b - a; while(d > 180) d -= 360; while(d < -180) d += 360; return d; }
   function turnOf(d){
@@ -28,8 +28,8 @@
     return {icon:'↩', text:'Da la vuelta'};
   }
   function buildSteps(p){
-    const pts = p.route, out = [{icon:'⬆', text:'Parte desde la entrada principal', at:0}];
-    let ref = heading(pts[0], pts[1]), len = 0;
+    const pts = p.route, out = [{icon:'⬆', text:'Parte desde el origen seleccionado', at:0}];
+    let ref = pts.length>1?heading(pts[0], pts[1]):0, len = 0;
     for(let i = 1; i < pts.length; i++){
       const seg = Math.hypot(pts[i][0]-pts[i-1][0], pts[i][1]-pts[i-1][1]);
       if(i < pts.length - 1){
@@ -38,7 +38,7 @@
       }
       len += seg;
     }
-    out.push({icon:'🎯', text:'¡Llegaste a ' + p.title + '!', at:len});
+    out.push({icon:'🎯', text:'Fin del recorrido ilustrativo: ' + p.title, at:len});
     total = len; return out;
   }
   function renderList(active){
@@ -65,7 +65,7 @@
     const tick = ts => {
       if(t0 === null) t0 = ts; const d = Math.min(L, (ts - t0) / 1000 * speed), pt = routeLine.getPointAtLength(d);
       mover.setAttribute('transform', 'translate(' + pt.x + ' ' + pt.y + ')');
-      let k = 0; for(let i = 0; i < steps.length - 1; i++) if(d / L * total >= steps[i].at - .5) k = i;
+      let k = 0; for(let i = 0; i < steps.length - 1; i++) if((L?d / L * total:0) >= steps[i].at - .5) k = i;
       if(d >= L) k = steps.length - 1;
       if(k !== cur){ cur = k; show(k); }
       if(d < L) raf = requestAnimationFrame(tick); else { raf = null; chime(); document.dispatchEvent(new CustomEvent('orienta:arrive',{detail:{id:place.id}})); $('navPlay').textContent = '↻ Repetir recorrido'; }
@@ -89,78 +89,42 @@
   document.addEventListener('orienta:reset', () => { stop(); place=null; banner.hidden = true; });
 })();
 
-// Cámara del mapa y controles de exploración. Mantiene coordenadas de las rutas SVG.
+
+/* Mapa fijo: la captura y las rutas comparten el encuadre 698 × 500. */
 (()=>{
  const v=document.getElementById('mapViewport'),s=document.getElementById('mapStage');if(!v||!s)return;
  const css=document.createElement('style');css.textContent=`
- #mapViewport.interactive-map{position:relative;overflow:hidden!important;height:clamp(280px,35vw,560px)!important;touch-action:none;background:#e4ecf8;cursor:grab;isolation:isolate}
- #mapViewport.interactive-map:active{cursor:grabbing}
- #mapViewport.interactive-map #mapStage{position:absolute!important;left:0;top:0;width:1009px!important;height:440px!important;min-width:0!important;margin:0!important;transform-origin:0 0;user-select:none}
- .map-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px;background:#f6f9ff;border-bottom:1px solid #dce6f4}
- .map-controls button,.map-admin-mode{min-height:44px;min-width:44px;padding:8px 12px;border:1px solid #c5d8f3;border-radius:10px;background:white;color:#2156b0;font-weight:700;cursor:pointer}
- .map-controls button:hover,.map-admin-mode:hover{background:#e9f1ff}.map-controls button:focus-visible{outline:3px solid #759cde;outline-offset:2px}
- .map-controls .map-hint{flex:1 1 180px;font-size:12px;color:#526781;line-height:1.5}
- .map-crosshair{position:absolute;pointer-events:none;left:50%;top:50%;width:24px;height:24px;transform:translate(-50%,-50%);border:2px solid white;border-radius:50%;box-shadow:0 0 0 2px #2156b0;z-index:4}
- .map-crosshair:after,.map-crosshair:before{content:'';position:absolute;background:#2156b0;left:50%;top:50%;transform:translate(-50%,-50%)}.map-crosshair:before{width:12px;height:2px}.map-crosshair:after{height:12px;width:2px}
+ #mapViewport{position:relative;overflow:hidden!important;height:auto!important;touch-action:pan-y;cursor:default}
+ #mapStage{position:relative!important;width:100%!important;height:auto!important;min-width:0!important;aspect-ratio:698/500;transform:none!important;user-select:none}
+ #mapStage .satellite{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none}
+ #mapSvg{position:absolute;inset:0;width:100%;height:100%}
+ .scroll-hint,.map-controls,.map-crosshair{display:none!important}
+ .map-admin-mode{min-height:44px;padding:8px 12px;border:1px solid #c5d8f3;border-radius:10px;background:white;color:#2156b0;font-weight:700;cursor:pointer}
  .map-joy-focus{outline:3px solid #2156b0!important;outline-offset:-3px;background:#e9f1ff!important}
  .code-evidence{margin:12px 0 0;display:grid;gap:8px}.code-evidence button{display:block;width:100%;background:#fff;border:1px solid #dce6f4;border-radius:10px;overflow:hidden;padding:5px;cursor:zoom-in}.code-evidence img{display:block;width:100%;height:auto;object-fit:contain}.code-evidence figcaption{color:#526781;font-size:12px}
- @media(max-width:980px){#mapViewport.interactive-map{height:clamp(280px,65vw,440px)!important}.map-controls{padding:9px;gap:6px}.map-controls button{padding:7px 10px}.location-list{max-height:320px!important}.workspace{min-width:0}.map-controls .map-hint{flex-basis:100%}}
- @media(max-width:480px){.map-controls button{min-width:44px}.map-foot{flex-wrap:wrap}.map-legend{font-size:10px}.map-controls .map-hint{font-size:11px}}
  `;document.head.append(css);
- v.classList.add('interactive-map');v.tabIndex=0;v.setAttribute('aria-label','Mapa explorable. Usa las flechas, arrastra o amplía.');
- const toolbar=document.createElement('div');toolbar.className='map-controls';toolbar.innerHTML='<button type="button" data-map="minus" aria-label="Reducir mapa">−</button><button type="button" data-map="plus" aria-label="Ampliar mapa">+</button><button type="button" data-map="fit">Vista completa</button><button type="button" data-map="route">Ver ruta</button><button type="button" data-map="dest" hidden>Cambiar destino</button><span class="map-hint" aria-live="polite">Arrastra para explorar · pellizca para ampliar</span>';v.before(toolbar);
- const hint=toolbar.querySelector('.map-hint'),cross=document.createElement('span');cross.className='map-crosshair';cross.hidden=true;cross.setAttribute('aria-hidden','true');v.append(cross);
- const W=1009,H=440;let z=1,x=0,y=0,base=1,ready=false,route=null,joyMode='map',listIndex=-1,lastW=0,lastH=0;
- const clamp=(a,b,c)=>Math.min(c,Math.max(b,a));
- const dims=()=>({w:v.clientWidth,h:v.clientHeight});
- function bounds(){const {w,h}=dims(),k=base*z; x=W*k<=w?(w-W*k)/2:clamp(x,w-W*k,0);y=H*k<=h?(h-H*k)/2:clamp(y,h-H*k,0);}
- function draw(){bounds();s.style.transform=`translate(${x}px,${y}px) scale(${base*z})`;v.dataset.zoom=z.toFixed(2);}
- function center(cx,cy,zoom){const {w,h}=dims();z=clamp(zoom,1,5);x=w/2-cx*base*z;y=h/2-cy*base*z;draw();}
- function full(){center(W/2,H/2,1);}
- function fitRoute(){if(!route?.route?.length){full();return;}const {w,h}=dims(),xs=route.route.map(p=>p[0]),ys=route.route.map(p=>p[1]);const a=Math.min(...xs),b=Math.max(...xs),c=Math.min(...ys),d=Math.max(...ys);center((a+b)/2,(c+d)/2,Math.min(w/(b-a+180),h/(d-c+150))/base);}
- function resize(){const {w,h}=dims();if(!w||!h)return;const old=base*z,cx=ready?(lastW/2-x)/old:W/2,cy=ready?(lastH/2-y)/old:H/2;base=Math.min(w/W,h/H);lastW=w;lastH=h;if(!ready){ready=true;full();}else center(cx,cy,z);}
- function zoom(f,px=v.clientWidth/2,py=v.clientHeight/2){const old=base*z;const cx=(px-x)/old,cy=(py-y)/old;z=clamp(z*f,1,5);x=px-cx*base*z;y=py-cy*base*z;draw();}
- function pan(dx,dy){x+=dx;y+=dy;draw();}
- resize();if(window.ResizeObserver)new ResizeObserver(resize).observe(v);else addEventListener('resize',resize);
- toolbar.addEventListener('click',e=>{const b=e.target.closest('[data-map]');if(!b)return;switch(b.dataset.map){case 'minus':zoom(1/1.3);break;case 'plus':zoom(1.3);break;case 'fit':full();break;case 'route':fitRoute();break;case 'dest':document.body.classList.remove('mobile-route');b.hidden=true;document.getElementById('buscar')?.focus();break;}});
- const points=new Map();let dragged=false,ignoreClick=0;
- const pos=e=>({x:e.clientX-v.getBoundingClientRect().left,y:e.clientY-v.getBoundingClientRect().top});
- v.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;if(!points.size)dragged=false;const p=pos(e);points.set(e.pointerId,{...p,startX:p.x,startY:p.y});if(points.size>1){dragged=true;for(const id of points.keys())try{v.setPointerCapture(id);}catch(_){}}});
- v.addEventListener('pointermove',e=>{const old=points.get(e.pointerId);if(!old)return;const p=pos(e),other=[...points.entries()].find(([id])=>id!==e.pointerId)?.[1];if(other){const d1=Math.hypot(old.x-other.x,old.y-other.y),d2=Math.hypot(p.x-other.x,p.y-other.y);if(d1>8)zoom(d2/d1,(old.x+other.x)/2,(old.y+other.y)/2);pan((p.x-old.x)/2,(p.y-old.y)/2);dragged=true;}else if(dragged||Math.hypot(p.x-old.startX,p.y-old.startY)>5){if(!dragged)try{v.setPointerCapture(e.pointerId);}catch(_){}dragged=true;pan(p.x-old.x,p.y-old.y);}points.set(e.pointerId,{...old,...p});});
- const end=e=>{if(!points.has(e.pointerId))return;points.delete(e.pointerId);if(dragged)ignoreClick=performance.now()+450;};v.addEventListener('pointerup',end);v.addEventListener('pointercancel',end);v.addEventListener('lostpointercapture',end);v.addEventListener('pointerleave',e=>{if(!v.hasPointerCapture(e.pointerId))end(e);});v.addEventListener('click',e=>{if(performance.now()<ignoreClick){e.preventDefault();e.stopImmediatePropagation();}},true);
- v.addEventListener('wheel',e=>{if(!e.ctrlKey&&!e.metaKey)return;e.preventDefault();const p=pos(e);zoom(e.deltaY<0?1.15:1/1.15,p.x,p.y);},{passive:false});
- function selectCenter(){const {w,h}=dims(),k=base*z,cx=(w/2-x)/k,cy=(h/2-y)/k;const near=Object.values(window.ORIENTA_PLACES||{}).filter(p=>p.pin).map(p=>({p,d:Math.hypot(cx-p.pin[0],cy-p.pin[1])})).sort((a,b)=>a.d-b.d)[0];if(!near||near.d>125){hint.textContent='Acerca la mira a un destino y presiona OK.';return;}const spot=document.querySelector('.spot[data-place="'+near.p.id+'"]');spot?.dispatchEvent(new MouseEvent('click',{bubbles:true}));hint.textContent='Destino: '+near.p.title;}
- function step(dir){const delta={UP:[0,44],DOWN:[0,-44],LEFT:[44,0],RIGHT:[-44,0]}[dir];if(dir==='OK'){selectCenter();return;}if(!delta)return;const {w,h}=dims();const min=Math.max(1.8,(w+100)/(base*W),(h+100)/(base*H));if(z<min)zoom(min/z);pan(...delta);}
- v.addEventListener('keydown',e=>{if(e.target!==v)return;const key={ArrowUp:'UP',ArrowDown:'DOWN',ArrowLeft:'LEFT',ArrowRight:'RIGHT',Enter:'OK'}[e.key];if(key){e.preventDefault();cross.hidden=false;step(key);}else if(e.key==='+'||e.key==='-'){e.preventDefault();zoom(e.key==='+'?1.25:.8);}});
- function clearList(){document.querySelectorAll('.map-joy-focus').forEach(b=>b.classList.remove('map-joy-focus'));listIndex=-1;}
- const mode=document.createElement('button');mode.type='button';mode.className='map-admin-mode';mode.textContent='Joystick: explorar mapa';document.getElementById('adminPanel')?.append(mode);
- mode.addEventListener('click',()=>{joyMode=joyMode==='map'?'list':'map';mode.textContent=joyMode==='map'?'Joystick: explorar mapa':'Joystick: elegir destino';cross.hidden=joyMode!=='map';clearList();hint.textContent=joyMode==='map'?'Joystick: mueve la mira y presiona OK.':'Joystick: elige un destino de la lista y presiona OK.';});
- window.orientaJoystick=dir=>{if(!window.orientaAdmin)return;if(joyMode==='map'){cross.hidden=false;step(dir);}else{const items=[...document.querySelectorAll('.place-button')];if(!items.length)return;if(dir==='OK'){if(listIndex<0)listIndex=0;items[listIndex%items.length]?.click();clearList();return;}const d=dir==='UP'||dir==='LEFT'?-1:1;listIndex=listIndex<0?0:(listIndex+d+items.length)%items.length;items.forEach((b,i)=>b.classList.toggle('map-joy-focus',i===listIndex));items[listIndex].scrollIntoView({block:'nearest'});}};
- document.addEventListener('orienta:select',e=>{route=e.detail.found?window.ORIENTA_PLACES[e.detail.id]:null;if(route)fitRoute();});
- document.addEventListener('orienta:reset',()=>{route=null;full();clearList();cross.hidden=true;});
- const initial=new URLSearchParams(location.search).get('dest');if(initial&&window.ORIENTA_PLACES?.[initial]?.pin){route=window.ORIENTA_PLACES[initial];fitRoute();}
- toolbar.querySelector('[data-map=dest]').hidden=!document.body.classList.contains('mobile-route');
+ v.setAttribute('aria-label','Mapa fijo del campus. Selecciona un destino para ver su recorrido.');
+ // Permite volver a la lista en la vista móvil, sin controles de cámara.
+ const change=document.createElement('button');change.type='button';change.className='ghost-button';change.textContent='Cambiar destino';change.hidden=true;v.before(change);
+ const sync=()=>{change.hidden=!document.body.classList.contains('mobile-route');};new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilter:['class']});sync();
+ change.onclick=()=>{document.body.classList.remove('mobile-route');document.getElementById('buscar')?.focus();document.querySelector('.sidebar')?.scrollIntoView({block:'start',behavior:'smooth'});};
  // Evidencias reales del código proporcionadas por el equipo; no se modifican las fotos del montaje.
  const cards=document.querySelectorAll('#desarrollo>.grid>article'),gallery=document.getElementById('gallery-dialog');
  function evidence(card,file,label){if(!card)return;const f=document.createElement('figure');f.className='code-evidence';const b=document.createElement('button');b.type='button';b.setAttribute('aria-label','Ampliar '+label);const img=document.createElement('img');img.src='assets/evidencias/'+file;img.alt=label;img.loading='lazy';b.append(img);const cap=document.createElement('figcaption');cap.textContent=label;f.append(b,cap);card.append(f);b.addEventListener('click',()=>{if(!gallery)return;gallery.querySelector('img').src=img.src;gallery.querySelector('img').alt=label;gallery.querySelector('p').textContent=label;gallery.showModal();});}
  evidence(cards[0],'codigo-pseint.png','PSeInt · funciones y búsqueda de ubicaciones');evidence(cards[1],'codigo-java-algoritmo.png','Java · algoritmo del mapa interactivo');evidence(cards[1],'codigo-java-servidor.png','Java · servidor web Main.java');
 })();
 
-// La simulación original de Wokwi está integrada en index.html.
-
-/* Joystick de navegación global, activo exclusivamente para el administrador. */
-(()=>{const original=window.orientaJoystick;if(typeof original!=='function')return;
-const panel=document.getElementById('adminPanel'), old=panel?.querySelector('.map-admin-mode');if(!old)return;
-const dock=document.createElement('button');dock.type='button';dock.id='joy-global-mode';dock.className='map-admin-mode';dock.hidden=true;dock.style.cssText='position:fixed;bottom:16px;left:16px;z-index:45;background:#2156b0;color:white;border:1px solid #d0e0f8;border-radius:12px;padding:10px 14px;box-shadow:0 5px 18px #14294b33;max-width:calc(100vw - 32px);font-weight:700';document.body.append(dock);old.hidden=true;
-let mode=0,internal=0,pending=0,marked=null;
-const names=['Página completa','Explorar mapa','Elegir destino'];
-function clear(){if(marked){marked.style.outline='';marked.style.outlineOffset='';marked=null;}}
-function setMode(n){mode=n;clear();dock.textContent='Joystick: '+names[mode]+' · doble OK cambia modo';if(mode){let target=mode===1?0:1;if(internal!==target){old.click();internal=target;}document.getElementById('mapa')?.scrollIntoView({behavior:'smooth',block:'start'});}else document.querySelector('.map-crosshair')?.setAttribute('hidden','');}
-function visible(el){const r=el.getBoundingClientRect(),s=getComputedStyle(el);return !el.closest('[hidden]')&&!el.disabled&&s.visibility!=='hidden'&&r.width>0&&r.height>0&&r.bottom>0&&r.top<innerHeight&&r.right>0&&r.left<innerWidth;}
-function controls(){const dialog=document.querySelector('dialog[open]');return [...(dialog||document).querySelectorAll('button,a[href],summary,select,[role="button"]')].filter(visible);}
-function page(dir){if(dir==='UP'||dir==='DOWN'){clear();window.scrollBy({top:(dir==='UP'?-1:1)*Math.max(140,Math.round(innerHeight*.37)),behavior:'smooth'});return;}const a=controls();if(dir==='OK'){if(marked&&visible(marked)){if(marked.tagName==='SELECT'){marked.focus();marked.showPicker?.();}else marked.click();}return;}if(!a.length)return;let i=a.indexOf(marked);i=i<0?(dir==='LEFT'?a.length-1:0):(i+(dir==='LEFT'?-1:1)+a.length)%a.length;clear();marked=a[i];marked.style.outline='3px solid #2156b0';marked.style.outlineOffset='4px';marked.focus({preventScroll:true});}
-function execute(dir){if(!window.orientaAdmin)return;if(mode===0)page(dir);else original(dir);}
-window.orientaJoystick=dir=>{if(!window.orientaAdmin)return;if(dir==='OK'){if(pending){clearTimeout(pending);pending=0;setMode((mode+1)%3);}else pending=setTimeout(()=>{pending=0;execute('OK');},420);return;}if(pending){clearTimeout(pending);pending=0;}execute(dir);};
-dock.onclick=()=>setMode((mode+1)%3);
-function sync(){dock.hidden=!window.orientaAdmin;if(dock.hidden){clear();if(pending){clearTimeout(pending);pending=0;}setMode(0);}}
-new MutationObserver(sync).observe(panel,{attributes:true,attributeFilter:['hidden']});setMode(0);sync();})();
+/* Joystick: desplazamiento de la página o selección de destinos. Sin cámara móvil. */
+(()=>{
+ const panel=document.getElementById('adminPanel');if(!panel)return;
+ const dock=document.createElement('button');dock.type='button';dock.id='joy-global-mode';dock.className='map-admin-mode';dock.hidden=true;dock.style.cssText='position:fixed;bottom:16px;left:16px;z-index:45;background:#2156b0;color:white;box-shadow:0 5px 18px #14294b33;max-width:calc(100vw - 32px)';document.body.append(dock);
+ let mode=0,pending=0,marked=null,listIndex=-1;
+ function clear(){if(marked){marked.style.outline='';marked.style.outlineOffset='';marked=null;}document.querySelectorAll('.map-joy-focus').forEach(x=>x.classList.remove('map-joy-focus'));listIndex=-1;}
+ function setMode(n){mode=n;clear();dock.textContent='Joystick: '+(mode?'Elegir destino':'Página completa')+' · doble OK cambia modo';if(mode){document.body.classList.remove('mobile-route');document.getElementById('mapa')?.scrollIntoView({block:'start',behavior:'smooth'});}}
+ function visible(el){const r=el.getBoundingClientRect(),s=getComputedStyle(el);return !el.closest('[hidden]')&&!el.disabled&&s.visibility!=='hidden'&&r.width>0&&r.height>0&&r.bottom>0&&r.top<innerHeight&&r.right>0&&r.left<innerWidth;}
+ function page(dir){if(dir==='UP'||dir==='DOWN'){clear();window.scrollBy({top:(dir==='UP'?-1:1)*Math.max(140,Math.round(innerHeight*.37)),behavior:'smooth'});return;}const a=[...(document.querySelector('dialog[open]')||document).querySelectorAll('button,a[href],summary,select,[role="button"]')].filter(visible);if(dir==='OK'){if(marked&&visible(marked)){if(marked.tagName==='SELECT'){marked.focus();try{marked.showPicker?.();}catch(e){}}else marked.click();}return;}if(!a.length)return;let i=a.indexOf(marked);i=i<0?(dir==='LEFT'?a.length-1:0):(i+(dir==='LEFT'?-1:1)+a.length)%a.length;clear();marked=a[i];marked.style.outline='3px solid #2156b0';marked.style.outlineOffset='4px';marked.focus({preventScroll:true});}
+ function choose(dir){const a=[...document.querySelectorAll('.place-button')];if(!a.length)return;if(dir==='OK'){a[Math.max(0,listIndex)%a.length].click();clear();return;}listIndex=listIndex<0?0:(listIndex+(dir==='UP'||dir==='LEFT'?-1:1)+a.length)%a.length;a.forEach((x,i)=>x.classList.toggle('map-joy-focus',i===listIndex));a[listIndex].scrollIntoView({block:'nearest'});}
+ function execute(dir){if(!window.orientaAdmin)return;mode?choose(dir):page(dir);}
+ window.orientaJoystick=dir=>{if(!window.orientaAdmin)return;if(dir==='OK'){if(pending){clearTimeout(pending);pending=0;setMode(1-mode);}else pending=setTimeout(()=>{pending=0;execute('OK');},420);return;}if(pending){clearTimeout(pending);pending=0;}execute(dir);};
+ dock.onclick=()=>setMode(1-mode);function sync(){dock.hidden=!window.orientaAdmin;if(dock.hidden){if(pending){clearTimeout(pending);pending=0;}setMode(0);}}new MutationObserver(sync).observe(panel,{attributes:true,attributeFilter:['hidden']});setMode(0);sync();
+})();
